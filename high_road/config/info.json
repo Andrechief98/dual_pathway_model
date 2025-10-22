@@ -1,0 +1,18 @@
+{
+    "areas":{
+        "kitchen":{
+            "coordinates":[5,5],
+            "objects":[
+                "coffe_machine",
+                "table"
+            ]
+        },
+        "toilet":{
+            "coordinates":[3,3],
+            "objects":[
+                "WC",
+                "sink"
+            ]
+        }
+    }
+}

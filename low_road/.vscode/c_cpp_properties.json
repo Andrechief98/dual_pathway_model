@@ -1,0 +1,52 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/andrea/catkin_workspace/devel/include/**",
+        "/home/andrea/catkin_ws/devel/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/devel/include/**",
+        "/home/andrea/interbotix_ws/devel/include/**",
+        "/home/andrea/create3_ros1_ws/install_isolated/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/andrea/catkin_workspace/src/SFM_GT_planner/include/**",
+        "/home/andrea/catkin_ws/src/beginner_tutorials/include/**",
+        "/home/andrea/interbotix_ws/src/interbotix_ros_core/interbotix_ros_xseries/dynamixel_workbench_toolbox/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/fuzzy_logic_costmap/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/gazebo_plugins/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/gazebo-ros-actor-plugin/include/**",
+        "/home/andrea/catkin_ws/src/gazebo_sfm_plugin/include/**",
+        "/home/andrea/catkin_ws/src/global_planner/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/dual_pathway_model/high_road/include/**",
+        "/home/andrea/interbotix_ws/src/interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_moveit_interface/include/**",
+        "/home/andrea/interbotix_ws/src/interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_tf_tools/include/**",
+        "/home/andrea/interbotix_ws/src/interbotix_ros_toolboxes/interbotix_xs_toolbox/interbotix_xs_ros_control/include/**",
+        "/home/andrea/interbotix_ws/src/interbotix_ros_toolboxes/interbotix_xs_toolbox/interbotix_xs_rviz/include/**",
+        "/home/andrea/interbotix_ws/src/interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_sdk/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/people/leg_detector/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/llm_for_surveillance/llm_interface/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/dual_pathway_model/low_road/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/mir_robot/mir_dwb_critics/include/**",
+        "/home/andrea/catkin_workspace/src/neural_network/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/people/people_tracking_filter/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/navigation_layers/range_sensor_layer/include/**",
+        "/home/andrea/catkin_ws/src/local_planners/sfm_planner/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/navigation_layers/social_navigation_layers/include/**",
+        "/home/andrea/catkin_ws/src/local_planners/turtle_planner/include/**",
+        "/home/andrea/catkin_ws/src/turtlebot3_simulations/turtlebot3_fake/include/**",
+        "/home/andrea/catkin_ws/src/turtlebot3_simulations/turtlebot3_gazebo/include/**",
+        "/home/andrea/ros_packages_aggiuntivi/src/zed_broadcaster/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
