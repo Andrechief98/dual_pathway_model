@@ -91,9 +91,9 @@ namespace mpc_planner {
             cs::MX vk = U(2*k + 0);
             cs::MX wk = U(2*k + 1);
 
-            cs::MX diff_th = x_r(2) - xk(2);
-            // cs::MX raw = x_r(2) - xk(2);
-            // cs::MX diff_th = cs::MX::atan2(cs::MX::sin(raw), cs::MX::cos(raw)); // wrapped difference
+            // cs::MX diff_th = x_r(2) - xk(2);
+            cs::MX raw = x_r(2) - xk(2);
+            cs::MX diff_th = cs::MX::atan2(cs::MX::sin(raw), cs::MX::cos(raw)); // wrapped difference
             // J = J + Qth * diff_th * diff_th;
 
             J = J + Qx*(x_r(0) - xk(0))*(x_r(0) - xk(0))
@@ -550,6 +550,9 @@ namespace mpc_planner {
 
         alfa = msg->alfa;
         beta = msg->beta;
+
+        // std::cout << "Alfa: " << alfa << std::endl;
+        // std::cout << "Beta: " << beta << std::endl;
     }
 
 
@@ -740,29 +743,19 @@ namespace mpc_planner {
 
             buildReferenceTrajectory(p, Np, x, y);
 
-            double Qx = Q(0);
-            double Qy = Q(1);
-            double Qth = Q(2);
-            double Rv = R(0);
-            double Rw = R(1);
-            double Px = P(0);
-            double Py = P(1);
-            double Pth = P(2);
-            double alfa_obs = alfa;
-            double beta_obs = beta;
 
             int weights_start_idx = nx + nx*(Np+1);
             
-            p(weights_start_idx + 0) = Qx;
-            p(weights_start_idx + 1) = Qy;
-            p(weights_start_idx + 2) = Qth;
-            p(weights_start_idx + 3) = Rv;
-            p(weights_start_idx + 4) = Rw;
-            p(weights_start_idx + 5) = Px;
-            p(weights_start_idx + 6) = Py;
-            p(weights_start_idx + 7) = Pth;
-            p(weights_start_idx + 8) = alfa_obs;
-            p(weights_start_idx + 9) = beta_obs;
+            p(weights_start_idx + 0) = Q(0);
+            p(weights_start_idx + 1) = Q(1);
+            p(weights_start_idx + 2) = Q(2);
+            p(weights_start_idx + 3) = R(0);
+            p(weights_start_idx + 4) = R(1);
+            p(weights_start_idx + 5) = P(0);
+            p(weights_start_idx + 6) = P(1);
+            p(weights_start_idx + 7) = P(2);
+            p(weights_start_idx + 8) = alfa;
+            p(weights_start_idx + 9) = beta;
 
             p(weights_start_idx + N_cost_params + 0) = v;
             p(weights_start_idx + N_cost_params + 1) = w;
@@ -793,7 +786,6 @@ namespace mpc_planner {
 
 
             // prepara arg e chiama solver (warm-start se vuoi)
-            // cs::DM x0 = cs::DM::vertcat(std::vector<cs::DM>{X_previous, U_previous, s_previous});
             cs::DM x0 = cs::DM::vertcat(std::vector<cs::DM>{X_previous, U_previous, s_previous, s_obs_previous});
             std::map<std::string, cs::DM> arg;
             arg["x0"] = x0;
