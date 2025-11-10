@@ -187,7 +187,7 @@ class ThalamusNode:
 
                 angle_diff = math.atan2(math.sin(angle_diff), math.cos(angle_diff))
 
-                if abs(angle_diff) <= math.radians(90):   # 180° Field Of View
+                if abs(angle_diff) <= math.radians(180):   # 180° Field Of View
 
                     # The object is within robot's field of view
                     relative_dist = [
@@ -206,7 +206,7 @@ class ThalamusNode:
 
                     # We save the object
                     self.relative_info[name] = {
-                        "relative_dist":  relative_dist,
+                        "relative_dist":  math.sqrt(relative_dist[0]**2 + relative_dist[1]**2),
                         "relative_orient": relative_orient,
                         "relative_lin_vel": relative_lin_vel,
                         "relative_ang_vel": relative_ang_vel
