@@ -4,9 +4,13 @@ import threading
 import actionlib
 import json
 from std_msgs.msg import String
+from gazebo_msgs.msg import ModelStates
 from nav_msgs.msg import Odometry
 from low_road.srv import StringExchange, StringExchangeResponse
 from low_road.msg import promptProcessingAction, promptProcessingFeedback, promptProcessingResult, promptProcessingGoal
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+import math
+
 
 class ThalamusNode:
     def __init__(self):
@@ -24,11 +28,17 @@ class ThalamusNode:
             }
         }
 
+
+        self.object_state = {}
+        self.relative_info = {}
+
         # Publishers 
-        self.current_state_pub = rospy.Publisher("/current_state", String, queue_size=10)
+        self.current_state_pub = rospy.Publisher("/current_state", String, queue_size=1)
+        self.thalamus_info_pub = rospy.Publisher("/thalamus/info", String, queue_size=1)
 
         # Subscribers
         self.odom_sub = rospy.Subscriber("/odometry/filtered", Odometry, self.odom_feedback_callback)
+        self.gazebo_sub = rospy.Subscriber("/gazebo/model_states", ModelStates, self.thalamus_info_callback)
 
         # Action Clients
         self.cerebralCortexClient =  actionlib.SimpleActionClient("/cerebral_cortex_call", promptProcessingAction)
@@ -74,6 +84,148 @@ class ThalamusNode:
 
         self.current_state_pub.publish(json.dumps(self.current_state))
         return
+    
+
+    def thalamus_info_callback(self, msg):
+        # Structure of the Gazebo message ModelStates
+        #   string[] name
+        #   geometry_msgs/Pose[] pose
+        #   geometry_msgs/Twist[] twist 
+        
+        gazebo_msg = msg
+
+        name_list = gazebo_msg.name
+        pose_list = gazebo_msg.pose
+
+        neglecting_name_list = ["ground_plane", "walls"]
+
+        self.object_state = {}
+
+        # Information extraction
+        for name, pose in zip(name_list, pose_list):
+            if name in neglecting_name_list:
+                continue
+            else:
+                if name not in self.object_state.keys():
+                    # We have a new object. We add all the initial information and set the initial velocity to zero
+                    current_time = rospy.Time.now().to_sec()
+                    current_pos = [pose.position.x, pose.position.y, pose.position.z] 
+                    quaternion = [pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w]
+                    roll_x, pitch_y, yaw_z = euler_from_quaternion(quaternion)
+
+                    self.object_state[name] = {
+                        "current_time": current_time, 
+                        "current_pos": current_pos,
+                        "current_orient": yaw_z,
+                        "current_lin_vel": [0.0, 0.0],
+                        "current_ang_vel": 0.0,
+                        "current_lin_acc": [0.0, 0.0]
+                    }
+
+
+                else:
+                    # We extract the previous information to compute the velocity and acceleration
+                    previous_time = self.object_state[name]["current_time"]
+                    previous_pos = self.object_state[name]["current_pos"]
+                    previous_orient = self.object_state[name]["current_orient"]
+                    previous_lin_vel = self.object_state[name]["current_lin_vel"]
+
+                    # We compute the dt
+                    current_time = rospy.Time.now().to_sec()
+                    dt = current_time - previous_time
+
+                    if dt <= 0:
+                        dt = 0.001
+
+                    # We extract current information from Gazebo msg
+                    current_pos = [pose.position.x, pose.position.y, pose.position.z] 
+                    quaternion = [pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w]
+                    _, _, current_orient = euler_from_quaternion(quaternion) # roll_x, pitch_y, yaw_z 
+
+                    # We compute the current linear andangular velocity
+                    dx = current_pos[0] - previous_pos[0]
+                    dy = current_pos[1] - previous_pos[1]
+                    current_lin_vel = [dx/dt, dy/dt]
+
+                    current_ang_vel = (current_orient - previous_orient)/dt
+
+                    # We compute the current linear acceleration
+                    dvx = current_lin_vel[0] - previous_lin_vel[0]
+                    dvy = current_lin_vel[1] - previous_lin_vel[1]
+                    current_lin_acc = [dvx/dt, dvy/dt]
+
+                    self.object_state[name] = {
+                        "current_time": current_time, 
+                        "current_pos": current_pos,
+                        "current_orient": current_orient,
+                        "current_lin_vel": current_lin_vel,
+                        "current_ang_vel": current_ang_vel,
+                        "current_lin_acc": current_lin_acc
+                    }
+
+
+        self.relative_info = {}
+
+        for name in self.object_state.keys():
+            if name == "mir":
+                continue
+            
+            else:
+
+                robot_pos = self.object_state["mir"]["current_pos"]
+                obj_pos = self.object_state[name]["current_pos"]
+
+                robot_orient = self.object_state["mir"]["current_orient"]
+                obj_orient = self.object_state[name]["current_orient"]
+
+                rel_x = obj_pos[0] - robot_pos[0]
+                rel_y = obj_pos[1] - robot_pos[1]
+
+                angle_to_object = math.atan2(rel_y, rel_x)
+
+                angle_diff = angle_to_object - robot_orient
+
+                angle_diff = math.atan2(math.sin(angle_diff), math.cos(angle_diff))
+
+                if abs(angle_diff) <= math.radians(90):   # 180° Field Of View
+
+                    # The object is within robot's field of view
+                    relative_dist = [
+                        obj_pos[0] - robot_pos[0],
+                        obj_pos[1] - robot_pos[1]
+                    ]
+                    relative_orient = obj_orient - robot_orient
+
+                    relative_lin_vel = [
+                        self.object_state[name]["current_lin_vel"][0] - self.object_state["mir"]["current_lin_vel"][0],
+                        self.object_state[name]["current_lin_vel"][1] - self.object_state["mir"]["current_lin_vel"][1]
+                    ]
+                    relative_ang_vel = (
+                        self.object_state[name]["current_ang_vel"] - self.object_state["mir"]["current_ang_vel"]
+                    )
+
+                    # We save the object
+                    self.relative_info[name] = {
+                        "relative_dist":  relative_dist,
+                        "relative_orient": relative_orient,
+                        "relative_lin_vel": relative_lin_vel,
+                        "relative_ang_vel": relative_ang_vel
+                    }
+                # else:
+                #     del self.relative_info[name]
+
+
+
+
+        # Collecting both global and relative information
+        self.thalamus_info = {
+            "object_state": self.object_state,
+            "relative_info": self.relative_info
+        }
+        self.thalamus_info_pub.publish(json.dumps(self.thalamus_info))
+        return
+    
+
 
 
     def action_feedback_cb(self, feedback):
@@ -92,6 +244,8 @@ class ThalamusNode:
         """
         while not rospy.is_shutdown() and self.running:
             try:
+                # success = self.cerebralCortexClient.wait_for_server()
+
                 user_input = input("User >> ")  # lettura bloccante, ma in thread separato
                 
                 if user_input.lower() == "/bye":
