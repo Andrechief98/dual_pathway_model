@@ -83,7 +83,7 @@ private:
     int nx = 3;             // state dim
     int nu = 2;             // control dim
     int ns = 1;             // slack variable dimension
-    int Np = 40;            // prediction horizon
+    int Np = 20;            // prediction horizon
     int Nc = 0;             // control horizon
     int N_cost_params = 0;
     int N_obs = 0;
@@ -91,11 +91,13 @@ private:
     int ref_len = nx*(Np+1);
     std::string model = "euler";
     double r_robot = 0.5;
-    double dt = 0.05;        // Timestep
+    double robot_length = 1;
+    double robot_width = 0.5;
+    double dt = 0.2;        // Timestep
     double v_max = 0.5;
     double v_min = 0;
-    double w_max = 1.5;
-    double w_min = -1.5;
+    double w_max = 2;
+    double w_min = -2;
     double delta_v_max = 0.5;  // [m/s per step] esempio: variazione massima velocità lineare
     double delta_w_max = 1;  // [rad/s per step] esempio: variazione massima velocità angolare
 
@@ -117,7 +119,7 @@ private:
     // Planner infomation
     Eigen::Vector2d goal_pos;
     double goal_orient;
-    double distance_tolerance=0.2;
+    double distance_tolerance=0.3;
     double angle_tolerance=0.13;
     
 
