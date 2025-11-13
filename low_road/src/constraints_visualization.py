@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+import rospy
+import math
+import tf2_ros
+import tf2_geometry_msgs
+from gazebo_msgs.msg import ModelStates
+from visualization_msgs.msg import Marker, MarkerArray
+from geometry_msgs.msg import Point, PointStamped
+
+
+class ModelMarkerVisualizerTF2:
+    def __init__(self):
+        rospy.init_node("model_marker_visualizer")
+
+        # Publisher per i marker
+        self.marker_pub = rospy.Publisher("/visualization_marker_array", MarkerArray, queue_size=10)
+
+        # Subscriber a /gazebo/model_states
+        rospy.Subscriber("/gazebo/model_states", ModelStates, self.model_callback)
+
+        # TF2 buffer + listener
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+
+        # Parametri di visualizzazione
+        self.color_r = 1.0
+        self.color_g = 0.0
+        self.color_b = 0.0
+        self.color_a = 1.0
+        self.line_thickness = 0.03
+        self.num_points = 60
+
+        rospy.loginfo("Model Marker Visualizer.")
+        rospy.spin()
+
+    def model_callback(self, msg):
+        marker_array = MarkerArray()
+
+        try:
+            # Ottieni la trasformazione map → odom
+            transform = self.tf_buffer.lookup_transform(
+                "map",  # target frame
+                "odom",   # source frame
+                rospy.Time(0),
+                rospy.Duration(1)
+            )
+        except Exception as e:
+            rospy.logwarn_throttle(e)
+            return
+
+        for i, name in enumerate(msg.name):
+            if name == "ground_plane":
+                continue
+
+            pose = msg.pose[i]
+
+            # Costruisci un punto in frame "map"
+            point_map = PointStamped()
+            point_map.header.frame_id = "map"
+            point_map.header.stamp = rospy.Time(0)
+            point_map.point.x = pose.position.x
+            point_map.point.y = pose.position.y
+            point_map.point.z = pose.position.z
+
+            # print(f"Point in map frame: {point_map.point.x}, {point_map.point.y}, {point_map.point.z}")
+
+            # Trasforma in frame "odom"
+            try:
+                point_odom = tf2_geometry_msgs.do_transform_point(point_map, transform)
+            except Exception as e:
+                rospy.logwarn(f"Errore nella trasformazione per {name}: {e}")
+                continue
+            
+            # print(f"Point in odom frame: {point_odom.point.x}, {point_odom.point.y}, {point_odom.point.z}")
+
+            # ID stabile
+            marker_id = hash(name) % 10000
+
+            if name == "ground_plane" or name == "walls":
+                continue
+            elif name == "mir":
+                marker = self.create_ellipse_marker(point_odom.point.x, point_odom.point.y, name, marker_id)
+            else:
+                marker = self.create_circle_marker(point_odom.point.x, point_odom.point.y, name, marker_id)
+
+            marker_array.markers.append(marker)
+
+        self.marker_pub.publish(marker_array)
+
+    # --- Marker helper ---
+    def create_circle_marker(self, x, y, name, marker_id):
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = name
+        marker.id = marker_id
+        marker.type = Marker.LINE_STRIP
+        marker.action = Marker.ADD
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = self.line_thickness
+        marker.color.r = self.color_r
+        marker.color.g = self.color_g
+        marker.color.b = self.color_b
+        marker.color.a = self.color_a
+
+        radius = 0.5
+        for i in range(self.num_points + 1):
+            theta = 2 * math.pi * i / self.num_points
+            p = Point()
+            p.x = x + radius * math.cos(theta)
+            p.y = y + radius * math.sin(theta)
+            p.z = 0.05
+            marker.points.append(p)
+
+        marker.lifetime = rospy.Duration(0)
+        return marker
+
+    def create_ellipse_marker(self, x, y, name, marker_id):
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = name
+        marker.id = marker_id
+        marker.type = Marker.LINE_STRIP
+        marker.action = Marker.ADD
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = self.line_thickness
+        marker.color.r = self.color_r
+        marker.color.g = self.color_g
+        marker.color.b = self.color_b
+        marker.color.a = self.color_a
+
+        a = 0.8  # semi-asse maggiore
+        b = 0.4  # semi-asse minore
+        for i in range(self.num_points + 1):
+            theta = 2 * math.pi * i / self.num_points
+            p = Point()
+            p.x = x + a * math.cos(theta)
+            p.y = y + b * math.sin(theta)
+            p.z = 0.05
+            marker.points.append(p)
+
+        marker.lifetime = rospy.Duration(0)
+        return marker
+
+
+if __name__ == "__main__":
+    try:
+        ModelMarkerVisualizerTF2()
+    except rospy.ROSInterruptException:
+        pass
