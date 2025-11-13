@@ -281,24 +281,23 @@ namespace mpc_planner {
                 cs::MX dyr = sin_m * dx + cos_m * dy;
 
                 // Inflazione ellisse
-                cs::MX a_infl = a_robot + obs_r;
-                cs::MX b_infl = b_robot + obs_r;
+                double safety_margin = 1.5;
+                cs::MX a_infl = a_robot + safety_margin*obs_r;
+                cs::MX b_infl = b_robot + safety_margin*obs_r;
 
-                // Vincolo ellittico: (dxr^2 / a_infl^2) + (dyr^2 / b_infl^2) - 1 <= ? 
-                // Vogliamo obs_constr <= s_obs_jk (se rendiamo slack positivo), ma nel tuo schema hai 
-                // usato obs_constr + s >= 0. Qui costruiamo obs_constr = (dxr^2/a^2 + dyr^2/b^2 - 1)
+                // Vincolo ellittico: 1- (dxr^2 / a_infl^2) + (dyr^2 / b_infl^2) <= 0 
                 cs::MX obs_constr = 1 - (dxr*dxr) / (a_infl*a_infl) - (dyr*dyr) / (b_infl*b_infl);
 
                 // Slack corrispondente 
                 int slack_index = k*N_obs + j; 
                 cs::MX s_obs_kj = s_obs(slack_index);
 
-                // Soft constraint: obs_constr - s_obs_jk <= 0  <=>  obs_constr - s <= 0
+                // Soft constraint: obs_constr <= s_obs_jk  <=>  obs_constr - s <= 0
                 cs::MX g_obs = obs_constr - s_obs_kj;
 
                 g.push_back(g_obs);
-                lbg = cs::DM::vertcat({lbg, cs::DM::ones(1)*-1e20});     // lower bound 0
-                ubg = cs::DM::vertcat({ubg, cs::DM::zeros(1)});          // upper bound +large
+                lbg = cs::DM::vertcat({lbg, cs::DM::ones(1)*-1e20});     // lower bound 
+                ubg = cs::DM::vertcat({ubg, cs::DM::zeros(1)});          // upper bound 
             }
         }
 
@@ -591,7 +590,7 @@ namespace mpc_planner {
                     // filtra solo gli oggetti che ti interessano
                     if (name != "walls" && name != "ground_plane" && name != "mir")
                     {   
-                        double radius = 0.5;
+                        double radius = 0.3;
 
 
                         // STARE ATTENTI AL FATTO CHE ros::Time::now() FORNISCE IL TIME DATO DAL CLOCK O DEL PC NEL CASO 
@@ -599,7 +598,9 @@ namespace mpc_planner {
                         // ros::Time time = ros::Time::now();
                         // Obstacle new_obstacle(msg->pose[i].position.x, msg->pose[i].position.y, radius, i, time);
                         // obstacles_list.push_back(new_obstacle);
-                    
+                        
+
+                        // CONSIDERING TRASFORMATION:
                         // Costruisci la pose nel frame sorgente (es. "world" o "odom")
                         geometry_msgs::PoseStamped pose_in, pose_out;
                         pose_in.header.frame_id = "odom";  // non è corretto per i modelli gazebo ma l'origin dei modelli gazebo corrisponde a odom
@@ -947,7 +948,7 @@ namespace mpc_planner {
 
                     obstacle_cost += -alfa * std::log(beta * distance); //alfa/(0.05*(distance * distance));
 
-                    std::cout << "Distance from obstacle: " << distance << std::endl;
+                    // std::cout << "Distance from obstacle: " << distance << std::endl;
 
                     // Slack cost per questo ostacolo
                     double s_jk = s_obs_opt(idx_obs).scalar();

@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-
-    <include file="$(find interbotix_xslocobot_nav)/launch/xslocobot_nav_sim.launch">
-    </include>
-
-
-
-</launch>

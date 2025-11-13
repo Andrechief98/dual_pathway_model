@@ -5,7 +5,7 @@ import tf2_ros
 import tf2_geometry_msgs
 from gazebo_msgs.msg import ModelStates
 from visualization_msgs.msg import Marker, MarkerArray
-from geometry_msgs.msg import Point, PointStamped
+from geometry_msgs.msg import PoseStamped, Point, Quaternion
 
 
 class ModelMarkerVisualizerTF2:
@@ -45,7 +45,7 @@ class ModelMarkerVisualizerTF2:
                 rospy.Duration(1)
             )
         except Exception as e:
-            rospy.logwarn_throttle(e)
+            rospy.logwarn(e)
             return
 
         for i, name in enumerate(msg.name):
@@ -55,21 +55,20 @@ class ModelMarkerVisualizerTF2:
             pose = msg.pose[i]
 
             # Costruisci un punto in frame "map"
-            point_map = PointStamped()
-            point_map.header.frame_id = "map"
-            point_map.header.stamp = rospy.Time(0)
-            point_map.point.x = pose.position.x
-            point_map.point.y = pose.position.y
-            point_map.point.z = pose.position.z
+            pose_map = PoseStamped()
+            pose_map.header.frame_id = "map"
+            pose_map.header.stamp = rospy.Time.now()
+            pose_map.pose = pose
+
 
             # print(f"Point in map frame: {point_map.point.x}, {point_map.point.y}, {point_map.point.z}")
 
             # Trasforma in frame "odom"
-            try:
-                point_odom = tf2_geometry_msgs.do_transform_point(point_map, transform)
-            except Exception as e:
-                rospy.logwarn(f"Errore nella trasformazione per {name}: {e}")
-                continue
+            # try:
+            #     pose_odom = tf2_geometry_msgs.do_transform_pose(pose_map, transform)
+            # except Exception as e:
+            #     rospy.logwarn(f"Errore nella trasformazione per {name}: {e}")
+            #     continue
             
             # print(f"Point in odom frame: {point_odom.point.x}, {point_odom.point.y}, {point_odom.point.z}")
 
@@ -79,16 +78,16 @@ class ModelMarkerVisualizerTF2:
             if name == "ground_plane" or name == "walls":
                 continue
             elif name == "mir":
-                marker = self.create_ellipse_marker(point_odom.point.x, point_odom.point.y, name, marker_id)
+                marker = self.create_ellipse_marker(pose_map.pose.position, pose_map.pose.orientation, name, marker_id)
             else:
-                marker = self.create_circle_marker(point_odom.point.x, point_odom.point.y, name, marker_id)
+                marker = self.create_circle_marker(pose_map.pose.position, pose_map.pose.orientation, name, marker_id)
 
             marker_array.markers.append(marker)
 
         self.marker_pub.publish(marker_array)
 
     # --- Marker helper ---
-    def create_circle_marker(self, x, y, name, marker_id):
+    def create_circle_marker(self, position, orientation, name, marker_id):
         marker = Marker()
         marker.header.frame_id = "map"
         marker.header.stamp = rospy.Time.now()
@@ -96,26 +95,20 @@ class ModelMarkerVisualizerTF2:
         marker.id = marker_id
         marker.type = Marker.LINE_STRIP
         marker.action = Marker.ADD
-        marker.pose.orientation.w = 1.0
+        marker.pose.position = position
+        marker.pose.orientation = Quaternion(0,0,0,1)
         marker.scale.x = self.line_thickness
-        marker.color.r = self.color_r
-        marker.color.g = self.color_g
-        marker.color.b = self.color_b
-        marker.color.a = self.color_a
+        marker.color.r, marker.color.g, marker.color.b, marker.color.a = self.color_r, self.color_g, self.color_b, self.color_a
 
-        radius = 0.5
+        radius = 0.25
         for i in range(self.num_points + 1):
             theta = 2 * math.pi * i / self.num_points
-            p = Point()
-            p.x = x + radius * math.cos(theta)
-            p.y = y + radius * math.sin(theta)
-            p.z = 0.05
+            p = Point(x=radius * math.cos(theta), y=radius * math.sin(theta), z=0.05)
             marker.points.append(p)
-
         marker.lifetime = rospy.Duration(0)
         return marker
 
-    def create_ellipse_marker(self, x, y, name, marker_id):
+    def create_ellipse_marker(self, position, orientation, name, marker_id):
         marker = Marker()
         marker.header.frame_id = "map"
         marker.header.stamp = rospy.Time.now()
@@ -123,23 +116,16 @@ class ModelMarkerVisualizerTF2:
         marker.id = marker_id
         marker.type = Marker.LINE_STRIP
         marker.action = Marker.ADD
-        marker.pose.orientation.w = 1.0
+        marker.pose.position = position
+        marker.pose.orientation = orientation  # 👉 stessa orientazione del robot
         marker.scale.x = self.line_thickness
-        marker.color.r = self.color_r
-        marker.color.g = self.color_g
-        marker.color.b = self.color_b
-        marker.color.a = self.color_a
+        marker.color.r, marker.color.g, marker.color.b, marker.color.a = self.color_r, self.color_g, self.color_b, self.color_a
 
-        a = 0.8  # semi-asse maggiore
-        b = 0.4  # semi-asse minore
+        a, b = 0.8, 0.4
         for i in range(self.num_points + 1):
             theta = 2 * math.pi * i / self.num_points
-            p = Point()
-            p.x = x + a * math.cos(theta)
-            p.y = y + b * math.sin(theta)
-            p.z = 0.05
+            p = Point(x=a * math.cos(theta), y=b * math.sin(theta), z=0.05)
             marker.points.append(p)
-
         marker.lifetime = rospy.Duration(0)
         return marker
 

@@ -97,6 +97,7 @@
 
     <!-- <node pkg="low_road" type="amygdala.py" name="amygdala" output="screen" /> -->
     <node pkg="low_road" type="obstacle_parameters_node.py" name="obstacle_parameters_node" output="screen" />
+    <node pkg="low_road" type="constraints_visualization.py" name="constraint_visualizer_rviz" output="screen" />
     <!-- <node pkg="low_road" type="plot_fear_level.py" name="plot_fear_level" output="screen" /> -->
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find mir_navigation)/rviz/navigation.rviz" output="screen" />

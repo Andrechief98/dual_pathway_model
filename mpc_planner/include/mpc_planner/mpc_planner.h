@@ -90,7 +90,6 @@ private:
     int N_obs_info = 5;
     int ref_len = nx*(Np+1);
     std::string model = "euler";
-    double r_robot = 0.5;
     double robot_length = 1.6;
     double robot_width = 0.8;
     double dt = 0.2;        // Timestep
