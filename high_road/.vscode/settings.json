@@ -1,0 +1,18 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/andrea/catkin_workspace/devel/lib/python3/dist-packages",
+        "/home/andrea/ros_packages_aggiuntivi/devel/lib/python3/dist-packages",
+        "/home/andrea/catkin_ws/devel/lib/python3/dist-packages",
+        "/home/andrea/interbotix_ws/devel/lib/python3/dist-packages",
+        "/home/andrea/create3_ros1_ws/install_isolated/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/andrea/catkin_workspace/devel/lib/python3/dist-packages",
+        "/home/andrea/ros_packages_aggiuntivi/devel/lib/python3/dist-packages",
+        "/home/andrea/catkin_ws/devel/lib/python3/dist-packages",
+        "/home/andrea/interbotix_ws/devel/lib/python3/dist-packages",
+        "/home/andrea/create3_ros1_ws/install_isolated/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ]
+}

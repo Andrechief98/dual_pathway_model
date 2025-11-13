@@ -141,7 +141,7 @@ class FearTrigger:
 
 if __name__ == '__main__':
     try:
-        yaml_path = "/home/andrea/catkin_ws/src/local_planners/mpc_planner/config/mpc_params.yaml"
+        yaml_path = "/home/andrea/ros_packages_aggiuntivi/src/dual_pathway_model/mpc_planner/config/mpc_params.yaml"
         FearTrigger(yaml_path)
     except rospy.ROSInterruptException:
         pass

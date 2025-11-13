@@ -3,6 +3,7 @@ import rospy
 import threading
 import actionlib
 import json
+import numpy as np
 from std_msgs.msg import String
 from gazebo_msgs.msg import ModelStates
 from nav_msgs.msg import Odometry
@@ -99,10 +100,11 @@ class ThalamusNode:
 
         neglecting_name_list = ["ground_plane", "walls"]
 
-        self.object_state = {}
+        
 
         # Information extraction
         for name, pose in zip(name_list, pose_list):
+            
             if name in neglecting_name_list:
                 continue
             else:
@@ -124,6 +126,7 @@ class ThalamusNode:
 
 
                 else:
+                    # print(f"Name: {name}")
                     # We extract the previous information to compute the velocity and acceleration
                     previous_time = self.object_state[name]["current_time"]
                     previous_pos = self.object_state[name]["current_pos"]
@@ -145,7 +148,8 @@ class ThalamusNode:
                     # We compute the current linear andangular velocity
                     dx = current_pos[0] - previous_pos[0]
                     dy = current_pos[1] - previous_pos[1]
-                    current_lin_vel = [dx/dt, dy/dt]
+                    current_lin_vel = [round(dx/dt,3), round(dy/dt,3)]
+                    # print(f"Ostacle vel: {current_lin_vel}")
 
                     current_ang_vel = (current_orient - previous_orient)/dt
 
@@ -178,6 +182,9 @@ class ThalamusNode:
                 robot_orient = self.object_state["mir"]["current_orient"]
                 obj_orient = self.object_state[name]["current_orient"]
 
+                robot_lin_vel = self.object_state["mir"]["current_lin_vel"]
+                obj_lin_vel = self.object_state[name]["current_lin_vel"]
+
                 rel_x = obj_pos[0] - robot_pos[0]
                 rel_y = obj_pos[1] - robot_pos[1]
 
@@ -190,26 +197,34 @@ class ThalamusNode:
                 if abs(angle_diff) <= math.radians(180):   # 180° Field Of View
 
                     # The object is within robot's field of view
-                    relative_dist = [
+                    relative_dist = np.array([
                         obj_pos[0] - robot_pos[0],
                         obj_pos[1] - robot_pos[1]
-                    ]
+                    ])
+
+                    dist_norm = np.linalg.norm(relative_dist)
+
                     relative_orient = obj_orient - robot_orient
 
-                    relative_lin_vel = [
-                        self.object_state[name]["current_lin_vel"][0] - self.object_state["mir"]["current_lin_vel"][0],
-                        self.object_state[name]["current_lin_vel"][1] - self.object_state["mir"]["current_lin_vel"][1]
-                    ]
-                    relative_ang_vel = (
-                        self.object_state[name]["current_ang_vel"] - self.object_state["mir"]["current_ang_vel"]
-                    )
+                    relative_lin_vel = np.array([
+                        obj_lin_vel[0] - robot_lin_vel[0],
+                        obj_lin_vel[1] - robot_lin_vel[1]
+                    ])
+                                        
+
+                    if dist_norm < 1e-3: 
+                        dist_norm = 1e-3
+
+                    # Velocità radiale = proiezione scalare
+                    v_rad = round(np.dot(obj_lin_vel, relative_dist)/dist_norm,3)
+                    # print(f"Obstacle radial velocity: {v_rad}")
+                    
 
                     # We save the object
                     self.relative_info[name] = {
-                        "relative_dist":  math.sqrt(relative_dist[0]**2 + relative_dist[1]**2),
-                        "relative_orient": relative_orient,
-                        "relative_lin_vel": relative_lin_vel,
-                        "relative_ang_vel": relative_ang_vel
+                        "relative_dist" : dist_norm,
+                        "relative_orient" : relative_orient,
+                        "radial_vel" : v_rad,
                     }
                 # else:
                 #     del self.relative_info[name]

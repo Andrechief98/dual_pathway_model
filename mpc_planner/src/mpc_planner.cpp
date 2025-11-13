@@ -78,16 +78,16 @@ namespace mpc_planner {
         int weights_start_idx = nx + nx*(Np+1);
 
         // Extraction of the weights from p
-        cs::MX Qx = p(weights_start_idx + 0);
-        cs::MX Qy = p(weights_start_idx + 1);
-        cs::MX Qth = p(weights_start_idx + 2);
-        cs::MX Rv = p(weights_start_idx + 3);
-        cs::MX Rw = p(weights_start_idx + 4);
-        cs::MX Px = p(weights_start_idx + 5);
-        cs::MX Py = p(weights_start_idx + 6);
-        cs::MX Pth = p(weights_start_idx + 7);
-        cs::MX alfa = p(weights_start_idx + 8);
-        cs::MX beta = p(weights_start_idx + 9);
+        cs::MX Qx   =   p(weights_start_idx + 0);
+        cs::MX Qy   =   p(weights_start_idx + 1);
+        cs::MX Qth  =   p(weights_start_idx + 2);
+        cs::MX Rv   =   p(weights_start_idx + 3);
+        cs::MX Rw   =   p(weights_start_idx + 4);
+        cs::MX Px   =   p(weights_start_idx + 5);
+        cs::MX Py   =   p(weights_start_idx + 6);
+        cs::MX Pth  =   p(weights_start_idx + 7);
+        cs::MX alfa =   p(weights_start_idx + 8);
+        cs::MX beta =   p(weights_start_idx + 9);
           
 
         // Cost function
@@ -98,7 +98,7 @@ namespace mpc_planner {
             // Stato corrente
             cs::MX xk = X(cs::Slice(nx*k, nx*(k+1))); // 1 × nx
 
-            cs::MX x_r = p(cs::Slice(nx + nx*k, nx + nx*(k+1))); // nx × 1
+            cs::MX x_r = p(cs::Slice(nx + nx*k, nx + nx*(k+1))); // 1 × nx
 
             
             cs::MX vk = U(2*k + 0);
@@ -132,7 +132,7 @@ namespace mpc_planner {
                 cs::MX distance = cs::MX::sqrt(cs::MX::sum1(diff*diff));
 
                 // Penalty logaritmico
-                cs::MX obstacle_penalty = alfa/(0.05*(distance * distance)); // -alfa * cs::MX::log(beta * distance);
+                cs::MX obstacle_penalty = -alfa * cs::MX::log(beta * distance); //alfa/(0.05*(distance * distance))
 
                 // Aggiunta costo ostacolo
                 J = J + obstacle_penalty;
@@ -945,7 +945,7 @@ namespace mpc_planner {
                     double dy = y - fut_obs_y;
                     double distance = std::sqrt(dx*dx + dy*dy);
 
-                    obstacle_cost += alfa/(0.05*(distance * distance));//-alfa * std::log(beta * distance);
+                    obstacle_cost += -alfa * std::log(beta * distance); //alfa/(0.05*(distance * distance));
 
                     std::cout << "Distance from obstacle: " << distance << std::endl;
 

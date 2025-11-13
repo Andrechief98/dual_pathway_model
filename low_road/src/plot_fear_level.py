@@ -28,7 +28,7 @@ class RealtimePlotter:
 
     def handle_close(self, event):
         """Callback quando la finestra viene chiusa"""
-        rospy.loginfo("🛑 Finestra chiusa manualmente — arresto del nodo.")
+        rospy.loginfo("Finestra chiusa manualmente — arresto del nodo.")
         self._running = False
         rospy.signal_shutdown("Finestra chiusa")
 
@@ -61,7 +61,7 @@ class RealtimePlotter:
     def cleanup(self):
         plt.ioff()
         plt.close(self.fig)
-        rospy.loginfo("✅ Plot chiuso correttamente")
+        rospy.loginfo("Plot chiuso correttamente")
 
 if __name__ == "__main__":
     plotter = RealtimePlotter("/fearlevel", 200, 20)
