@@ -5,6 +5,8 @@ import math
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from mpc_planner.msg import mpcParameters
+from ollama import chat
+from ollama import ChatResponse
 import yaml
 
 
@@ -16,12 +18,13 @@ class AmygdalaNode:
 
         # Subscribers
         self.object_state_sub = rospy.Subscriber("/thalamus/info", String, self.update_low_road_risk)         # From Thalamus (low road information)
-        # self.cortex_input = rospy.Subscriber("", self.update_high_road_risk)                                # From Cortex (high road information)
+        self.cortex_input = rospy.Subscriber("/vlm/image/description", String, self.update_high_road_risk)                                # From Cortex (high road information)
         
         # Publishers
         self.low_road_risks_pub = rospy.Publisher("/amygdala/lowroad/risks", String, queue_size=1)
         self.fear_level_pub = rospy.Publisher("/fearlevel", String, queue_size=1)
 
+        self.flag = True
 
         self.u_low_road = 0
         self.u_high_road = 0
@@ -93,15 +96,46 @@ class AmygdalaNode:
         return
     
     def update_high_road_risk(self, msg):
-        cortex_msg = msg.u_cortex
+        image_description = msg.data
 
+        # TO DO: add the conversation management
+        response: ChatResponse = chat(
+            model='gemma3:270m', 
+            messages=[
+            {
+                'role': 'user',
+                'content': image_description,
+            },
+            ]
+        )
+
+        # Response of the Small Language Model
+        message_content = response.message.content
+        # print(message_content)
+
+        # Example of small Language Model output:
+        if self.flag :
+            message_content_ex = {
+                "risk": 1
+            }
+
+            self.flag  = False
+        else:
+            message_content_ex = {
+                "risk": 0
+            }
+
+            self.flag  = True
+        
+        self.u_high_road = message_content_ex["risk"]
         return
     
 
     def fear_dynamics(self):
         # Computation of the actual risk input as the mean of both low-road and high-road contributes
-        # self.u_eff = (self.u_low_road + self.u_high_road)/2
-        self.u_eff = self.u_low_road
+        self.u_eff = (self.u_low_road + self.u_high_road)/2
+        # print(self.u_eff)
+        # self.u_eff = self.u_low_road
 
         x1 = self.fear_level
         x2 = self.dot_fear_level

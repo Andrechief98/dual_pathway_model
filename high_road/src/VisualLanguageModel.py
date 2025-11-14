@@ -1,84 +1,87 @@
 #!/usr/bin/env python3
 import rospy
+from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from PIL import Image as PILImage
 import cv2
 from dual_pathway_interfaces.srv import highRoadInfo, highRoadInfoRequest
 
-class VLMImageRequester:
+class VLMnode:
     def __init__(self):
-        # Inizializza il nodo
-        rospy.init_node('vlm_image_requester', anonymous=True)
+
+        # Node initialization
+        rospy.init_node('vlm_node', anonymous=True)
         self.bridge = CvBridge()
 
-        # Parametri
-        self.service_name = rospy.get_param("~service_name", "/get_camera_image")
-        self.display_time_ms = rospy.get_param("~display_time_ms", 3000)  # durata visualizzazione in ms
+        # Publisher
+        self.image_description_pub = rospy.Publisher("/vlm/image/description", String, queue_size=1)
 
-        rospy.loginfo(f"[VLMImageRequester] Nodo pronto. Servizio: {self.service_name}")
+        # Service client
+        self.get_image_service = rospy.ServiceProxy("/get_camera_image", highRoadInfo)
 
-        # Attende che il servizio sia disponibile
-        rospy.wait_for_service(self.service_name)
-        self.get_image_service = rospy.ServiceProxy(self.service_name, highRoadInfo)
+        self.prompt = """aaaaaaaa"""
 
-    def get_single_frame(self, timeout=5.0):
-        """
-        Richiede un singolo frame dal servizio ROS
-        """
+
+    def get_frame_from_camera(self):
         try:
-            # Chiamata al servizio
+            rospy.wait_for_service('/get_camera_image', timeout=5.0)
             response = self.get_image_service()
-            cv_image = self.bridge.imgmsg_to_cv2(response.image, desired_encoding='bgr8')
-            return cv_image
+
+            relevant_info = response.relevant_info
+            frame = response.frame
+
+            cv_image = self.bridge.imgmsg_to_cv2(frame, desired_encoding='bgr8')
+            return cv_image, relevant_info
+        
         except rospy.ServiceException as e:
             rospy.logwarn(f"[VLMImageRequester] Errore chiamando il servizio: {e}")
             return None
 
+
     def show_image(self, cv_image):
-        """
-        Mostra l'immagine in una finestra OpenCV per display_time_ms millisecondi
-        """
         if cv_image is not None:
             cv2.imshow("Frame ricevuto", cv_image)
-            cv2.waitKey(self.display_time_ms)
+            cv2.waitKey(3000)
             cv2.destroyWindow("Frame ricevuto")
+
 
     def convert_to_pil(self, cv_image):
         """
-        Converte un'immagine OpenCV (BGR) in PIL.Image (RGB)
+        Convert an OpenCV image (BGR) in PIL image (RGB)
         """
         rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         pil_image = PILImage.fromarray(rgb_image)
         return pil_image
 
-    def process_with_vlm(self, pil_image):
-        """
-        Qui va la logica del VLM.
-        Attualmente simulata con un ritardo
-        """
-        rospy.loginfo(f"[VLMImageRequester] Elaborazione immagine (size={pil_image.size})...")
-        rospy.sleep(2.0)  # Simula il processing
-        rospy.loginfo("[VLMImageRequester] Elaborazione completata ✅")
+
+    def vlm_inference(self, pil_image, relevant_info):
+        ###### TO DO: VLM LOGIC
+        
+        print(relevant_info)
+
+        vlm_inference_response = "Why the sky is blue?"
+        
+        self.image_description_pub.publish(vlm_inference_response)
+        return
+
 
     def run(self):
-        """
-        Loop principale: richiede un frame alla volta, lo visualizza e lo processa
-        """
         while not rospy.is_shutdown():
-            cv_image = self.get_single_frame()
+            cv_image, relevant_info = self.get_frame_from_camera()
             if cv_image is None:
-                continue  # riprova se servizio non disponibile
+                continue
 
-            self.show_image(cv_image)
+            # self.show_image(cv_image)
             pil_image = self.convert_to_pil(cv_image)
-            self.process_with_vlm(pil_image)
+            self.vlm_inference(pil_image, relevant_info)
+            rospy.sleep(5)
 
 
 if __name__ == '__main__':
     try:
-        node = VLMImageRequester()
-        node.run()
+        VLM_node = VLMnode()
+        VLM_node.run()
     except rospy.ROSInterruptException:
         cv2.destroyAllWindows()
         pass

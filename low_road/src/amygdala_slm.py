@@ -4,9 +4,7 @@ import json
 from std_msgs.msg import String
 from ollama import chat
 from ollama import ChatResponse
-from nav_msgs.msg import Odometry
-from low_road.srv import StringExchange, StringExchangeResponse
-from low_road.msg import promptProcessingAction, promptProcessingFeedback, promptProcessingResult, promptProcessingGoal
+
 
 class AmygdalaNode:
     def __init__(self):
@@ -14,27 +12,20 @@ class AmygdalaNode:
         rospy.init_node("amygdala_node", anonymous=True)
 
         # Subscribers
-        self.state_sub = rospy.Subscriber("/current_state", String, self.update_status_callback)
 
-        self.current_state = None
-
-
-    def update_status_callback(self, msg):
-        self.current_state = json.loads(msg.data)
-        rospy.loginfo("update fatto")
-        return
     
     def fear_evaluation(self):
-        # response: ChatResponse = chat(
-        #     model='gemma3:270m', 
-        #     messages=[
-        #     {
-        #         'role': 'user',
-        #         'content': 'Why is the sky blue?',
-        #     },
-        #     ]
-        # )
-        rospy.loginfo("fear evaluated")
+        response: ChatResponse = chat(
+            model='gemma3:270m', 
+            messages=[
+            {
+                'role': 'user',
+                'content': 'Why is the sky blue?',
+            },
+            ]
+        )
+        message_content = response.message.content
+        print(message_content)
         return
         
 

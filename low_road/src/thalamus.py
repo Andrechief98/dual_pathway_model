@@ -43,7 +43,7 @@ class ThalamusNode:
         self.gazebo_sub = rospy.Subscriber("/gazebo/model_states", ModelStates, self.thalamus_info_callback)
 
         # Server
-        self.camera_image_server = rospy.Service('/get_camera_image/', highRoadInfo, self.getCameraImage)
+        self.camera_image_server = rospy.Service('/get_camera_image', highRoadInfo, self.getCameraImage)
 
         # Action Clients
         self.cerebralCortexClient =  actionlib.SimpleActionClient("/cerebral_cortex_call", promptProcessingAction)
@@ -243,7 +243,7 @@ class ThalamusNode:
                     "radial_vel" : v_rad,
                 }
 
-                if abs(angle_diff) <= math.radians(90):   # 180° Field Of View
+                if abs(angle_diff) <= math.radians(60):   # 120° Field Of View
                     # The object is within robot's field of view
                     self.relevant_object_list.append(name)
                 
