@@ -32,10 +32,7 @@
             <rosparam file="$(find mir_navigation)/config/move_base_common_params.yaml"                         command="load" />
             <rosparam file="$(find mir_navigation)/config/sbpl_global_params.yaml"                              command="load" />
 
-            <!-- Adopero i parametri standard dell'interbotix -->
-            <rosparam file="$(find interbotix_xslocobot_nav)/config/local_planner_params.yaml"                  command="load"/>
-            <rosparam file="$(find interbotix_xslocobot_nav)/config/global_planner_params.yaml"                 command="load"/>
-            <rosparam file="$(find mpc_planner)/config/move_base_params.yaml"                      command="load"/>
+            <rosparam file="$(find mpc_planner)/config/move_base_params.yaml"                                   command="load"/>
 
 
             <!-- global costmap params -->
@@ -67,10 +64,7 @@
             <rosparam file="$(find mir_navigation)/config/move_base_common_params.yaml"                         command="load" />
             <rosparam file="$(find mir_navigation)/config/sbpl_global_params.yaml"                              command="load" />
 
-            <!-- Adopero i parametri standard dell'interbotix -->
-            <rosparam file="$(find interbotix_xslocobot_nav)/config/local_planner_params.yaml"                  command="load"/>
-            <rosparam file="$(find interbotix_xslocobot_nav)/config/global_planner_params.yaml"                 command="load"/>
-            <rosparam file="$(find mpc_planner)/config/move_base_params.yaml"                      command="load"/>
+            <rosparam file="$(find mpc_planner)/config/move_base_params.yaml"                                   command="load"/>
 
             <!-- global costmap params -->
             <rosparam file="$(find mir_navigation)/config/costmap_common_params.yaml"                           command="load"      ns="global_costmap"         subst_value="true" />
@@ -90,7 +84,7 @@
     </group>
     
 
-    <!-- <node pkg="low_road" type="amygdala.py" name="amygdala" output="screen" /> -->
+    <node pkg="low_road" type="amygdala.py" name="amygdala" output="screen" />
     <node pkg="low_road" type="obstacle_parameters_node.py" name="obstacle_parameters_node" output="screen" />
     <node pkg="low_road" type="constraints_visualization.py" name="constraint_visualizer_rviz" output="screen" />
     <!-- <node pkg="low_road" type="plot_fear_level.py" name="plot_fear_level" output="screen" /> -->
