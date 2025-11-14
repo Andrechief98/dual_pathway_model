@@ -1,0 +1,10 @@
+# Request (prompt)
+string input_text
+
+---
+# Result (End of token generation)
+string output_text
+
+---
+# Feedback (token streaming)
+string token
