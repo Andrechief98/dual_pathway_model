@@ -58,14 +58,14 @@ class AmygdalaNode:
 
         if rel_thalamus_info!={}:
             for object in rel_thalamus_info.keys():
-                print(object)
+                # print(object)
 
                 rel_dist = rel_thalamus_info[object]["relative_dist"]
                 rel_orient = rel_thalamus_info[object]["relative_orient"]
                 rel_rad_vel = rel_thalamus_info[object]["radial_vel"]
 
-                #print(rel_dist)
-                print(f"Obstacle radial vel: {rel_rad_vel}")
+                # print(rel_dist)
+                # print(f"Obstacle radial vel: {rel_rad_vel}")
 
                 # Gaussian 
                 mu_d = 0

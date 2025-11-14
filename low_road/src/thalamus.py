@@ -5,10 +5,11 @@ import actionlib
 import json
 import numpy as np
 from std_msgs.msg import String
+from sensor_msgs.msg import Image
 from gazebo_msgs.msg import ModelStates
 from nav_msgs.msg import Odometry
-from low_road.srv import StringExchange, StringExchangeResponse
-from low_road.msg import promptProcessingAction, promptProcessingFeedback, promptProcessingResult, promptProcessingGoal
+from dual_pathway_interfaces.srv import highRoadInfo, highRoadInfoResponse
+from dual_pathway_interfaces.msg import promptProcessingAction, promptProcessingFeedback, promptProcessingResult, promptProcessingGoal
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import math
 
@@ -41,6 +42,9 @@ class ThalamusNode:
         self.odom_sub = rospy.Subscriber("/odometry/filtered", Odometry, self.odom_feedback_callback)
         self.gazebo_sub = rospy.Subscriber("/gazebo/model_states", ModelStates, self.thalamus_info_callback)
 
+        # Server
+        self.camera_image_server = rospy.Service('/get_camera_image/', highRoadInfo, self.getCameraImage)
+
         # Action Clients
         self.cerebralCortexClient =  actionlib.SimpleActionClient("/cerebral_cortex_call", promptProcessingAction)
 
@@ -52,6 +56,8 @@ class ThalamusNode:
         self.input_thread = threading.Thread(target=self.user_input_loop)
         self.input_thread.daemon = True  # termina quando il nodo chiude
         self.input_thread.start()
+
+        self.relevant_object_list = [] # To update the list of object within robot's fields of view
 
 
     def odom_feedback_callback(self, msg):
@@ -86,6 +92,18 @@ class ThalamusNode:
         self.current_state_pub.publish(json.dumps(self.current_state))
         return
     
+    def getCameraImage(self, req):
+        response = highRoadInfoResponse()
+        response.frame = rospy.wait_for_message("/camera/color/image_raw", Image)
+
+        relevant_info_dict = {}
+
+        for object in self.relevant_object_list:
+            relevant_info_dict[object] = self.relative_info[object]
+
+        response.relevant_info = json.dumps(relevant_info_dict)
+        return response
+        
 
     def thalamus_info_callback(self, msg):
         # Structure of the Gazebo message ModelStates
@@ -169,6 +187,7 @@ class ThalamusNode:
 
 
         self.relative_info = {}
+        self.relevant_object_list = []
 
         for name in self.object_state.keys():
             if name == "mir":
@@ -194,40 +213,40 @@ class ThalamusNode:
 
                 angle_diff = math.atan2(math.sin(angle_diff), math.cos(angle_diff))
 
-                if abs(angle_diff) <= math.radians(180):   # 180° Field Of View
+                relative_dist = np.array([
+                    obj_pos[0] - robot_pos[0],
+                    obj_pos[1] - robot_pos[1]
+                ])
 
+                dist_norm = np.linalg.norm(relative_dist)
+
+                relative_orient = obj_orient - robot_orient
+
+                relative_lin_vel = np.array([
+                    obj_lin_vel[0] - robot_lin_vel[0],
+                    obj_lin_vel[1] - robot_lin_vel[1]
+                ])
+                                    
+
+                if dist_norm < 1e-3: 
+                    dist_norm = 1e-3
+
+                # Velocità radiale = proiezione scalare
+                v_rad = round(np.dot(obj_lin_vel, relative_dist)/dist_norm,3)
+                # print(f"Obstacle radial velocity: {v_rad}")
+                
+
+                # We save the object
+                self.relative_info[name] = {
+                    "relative_dist" : dist_norm,
+                    "relative_orient" : relative_orient,
+                    "radial_vel" : v_rad,
+                }
+
+                if abs(angle_diff) <= math.radians(90):   # 180° Field Of View
                     # The object is within robot's field of view
-                    relative_dist = np.array([
-                        obj_pos[0] - robot_pos[0],
-                        obj_pos[1] - robot_pos[1]
-                    ])
-
-                    dist_norm = np.linalg.norm(relative_dist)
-
-                    relative_orient = obj_orient - robot_orient
-
-                    relative_lin_vel = np.array([
-                        obj_lin_vel[0] - robot_lin_vel[0],
-                        obj_lin_vel[1] - robot_lin_vel[1]
-                    ])
-                                        
-
-                    if dist_norm < 1e-3: 
-                        dist_norm = 1e-3
-
-                    # Velocità radiale = proiezione scalare
-                    v_rad = round(np.dot(obj_lin_vel, relative_dist)/dist_norm,3)
-                    # print(f"Obstacle radial velocity: {v_rad}")
-                    
-
-                    # We save the object
-                    self.relative_info[name] = {
-                        "relative_dist" : dist_norm,
-                        "relative_orient" : relative_orient,
-                        "radial_vel" : v_rad,
-                    }
-                # else:
-                #     del self.relative_info[name]
+                    self.relevant_object_list.append(name)
+                
 
 
 

@@ -4,7 +4,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from PIL import Image as PILImage
 import cv2
-from srv import highRoadInfo  # Sostituisci con il nome del tuo servizio
+from dual_pathway_interfaces.srv import highRoadInfo, highRoadInfoRequest
 
 class VLMImageRequester:
     def __init__(self):

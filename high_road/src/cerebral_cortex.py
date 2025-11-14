@@ -10,7 +10,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 from std_srvs.srv import Empty
 import actionlib
-from low_road.msg import promptProcessingAction, promptProcessingFeedback, promptProcessingResult
+from dual_pathway_interfaces.msg import promptProcessingAction, promptProcessingFeedback, promptProcessingResult
 from agents import Agent, Runner, SQLiteSession, function_tool
 from openai.types.responses import ResponseTextDeltaEvent
 

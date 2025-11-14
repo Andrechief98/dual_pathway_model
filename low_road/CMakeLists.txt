@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   tf2
-
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -59,16 +59,16 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-add_service_files(
-  FILES
-  StringExchange.srv
-)
+# add_service_files(
+#   FILES
+#   StringExchange.srv
+# )
 
 ## Generate actions in the 'action' folder
-add_action_files(
-  FILES
-  promptProcessing.action
-)
+# add_action_files(
+#   FILES
+#   promptProcessing.action
+# )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
@@ -76,6 +76,7 @@ generate_messages(
   actionlib_msgs
   geometry_msgs   
   std_msgs
+  sensor_msgs
 )
 
 ################################################
@@ -110,7 +111,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES low_road
-  CATKIN_DEPENDS actionlib_msgs geometry_msgs message_generation roscpp rospy std_msgs
+  CATKIN_DEPENDS actionlib_msgs geometry_msgs message_generation roscpp rospy std_msgs sensor_msgs
 #  DEPENDS system_lib
 )
 
