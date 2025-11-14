@@ -281,7 +281,7 @@ namespace mpc_planner {
                 cs::MX dyr = sin_m * dx + cos_m * dy;
 
                 // Inflazione ellisse
-                double safety_margin = 1.5;
+                double safety_margin = 1.1;
                 cs::MX a_infl = a_robot + safety_margin*obs_r;
                 cs::MX b_infl = b_robot + safety_margin*obs_r;
 
