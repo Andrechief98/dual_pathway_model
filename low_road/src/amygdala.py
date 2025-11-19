@@ -23,6 +23,7 @@ class AmygdalaNode:
         # Publishers
         self.low_road_risks_pub = rospy.Publisher("/amygdala/lowroad/risks", String, queue_size=1)
         self.fear_level_pub = rospy.Publisher("/fearlevel", String, queue_size=1)
+        self.max_risk_pub = rospy.Publisher("/maxrisk", String, queue_size=1)
 
         self.flag = True
 
@@ -80,13 +81,14 @@ class AmygdalaNode:
                 v0 = -1;          # Neutral value (0.5 in rel_lin_vel = -1)
                 # rel_vel_risk = 1 / (1 + math.exp(-k2 * (-rel_rad_vel - v0))); 
 
-                object_risk_levels[object] = round(rel_dist_risk,2)
+                object_risk_levels[object] = round(rel_dist_risk,3)
 
 
             # Verify that it works for a single object
             object_name_list = list(rel_thalamus_info.keys())
             first_name = object_name_list[0]
             self.u_low_road = object_risk_levels[first_name] 
+            # self.u_low_road = max(list(object_risk_levels.values()))
         else:
             # We don't have any object
             self.u_low_road = 0
