@@ -7,6 +7,7 @@ from PIL import Image as PILImage
 import cv2
 from dual_pathway_interfaces.srv import highRoadInfo, highRoadInfoRequest
 from ollama import chat
+import time
 
 class VLMnode:
     def __init__(self):
@@ -73,12 +74,12 @@ class VLMnode:
                 {
                     'role': 'user', 
                     'content': prompt,
-                    'image': pil_image
+                    'image': [pil_image]
                     }
                 ],
         )
         
-        self.image_description_pub.publish(vlm_inference_response)
+        self.image_description_pub.publish(vlm_inference_response.message.content)
         return
 
 
@@ -90,8 +91,11 @@ class VLMnode:
 
             # self.show_image(cv_image)
             pil_image = self.convert_to_pil(cv_image)
+            start_time = time.perf_counter()
             self.vlm_inference(pil_image, relevant_info)
-            rospy.sleep(5)
+            end_time = time.perf_counter()
+            print(f"Inference time: {round(end_time-start_time,4)}")
+            # rospy.sleep(5)
 
 
 if __name__ == '__main__':
