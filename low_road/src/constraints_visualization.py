@@ -13,7 +13,7 @@ class ModelMarkerVisualizerTF2:
         rospy.init_node("model_marker_visualizer")
 
         # Publisher per i marker
-        self.marker_pub = rospy.Publisher("/visualization_marker_array", MarkerArray, queue_size=10)
+        self.marker_pub = rospy.Publisher("/visualization_marker_array", MarkerArray, queue_size=1)
 
         # Subscriber a /gazebo/model_states
         rospy.Subscriber("/gazebo/model_states", ModelStates, self.model_callback)
