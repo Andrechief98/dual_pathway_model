@@ -27,10 +27,10 @@ class Realtime3DPlotter:
         self.fig = plt.figure(figsize=(8, 7))
         self.ax = self.fig.add_subplot(111, projection="3d")
 
-        self.ax.set_xlabel("Relative Distance")
-        self.ax.set_ylabel("Radial Velocity")
-        self.ax.set_zlabel("Fear Value (Surface)")
-        self.ax.set_title("Realtime 3D Fear Plot (Color‑Encoded Height)")
+        self.ax.set_xlabel("Rel Dist (m)")
+        self.ax.set_ylabel("Rad Vel (m/s)")
+        self.ax.set_zlabel("Fear")
+        # self.ax.set_title("Realtime 3D Fear Map")
 
         # Funzioni matematiche
         def gaussian(x, mu=0, sigma=2):
@@ -49,6 +49,7 @@ class Realtime3DPlotter:
         Y = np.linspace(-1, 1, 40)
         X, Y = np.meshgrid(X, Y)
         Z = self.fear_function(X, Y)
+        Z = Z/Z.max()
 
         # Superficie color-mapped
         self.ax.plot_surface(

@@ -25,9 +25,9 @@ class Realtime2DColorMapPlotter:
         plt.ion()
         self.fig, self.ax = plt.subplots(figsize=(8, 6))
 
-        self.ax.set_xlabel("Relative Distance")
-        self.ax.set_ylabel("Radial Velocity")
-        self.ax.set_title("Realtime 2D Fear Map (color = fear)")
+        self.ax.set_xlabel("Rel Dist (m)")
+        self.ax.set_ylabel("Rad Vel (m/s)")
+        # self.ax.set_title("Realtime 2D Fear Map")
 
         # Funzioni matematiche (parametri riportati a quelli originali)
         def gaussian(x, mu=0, sigma=2):
@@ -39,10 +39,6 @@ class Realtime2DColorMapPlotter:
         def fear_function(x, y):
             return gaussian(x, y) * sigmoid(y)
 
-        # NOTE: gaussian expects x only; to keep signature compatible do this wrapper
-        def fear_function(x, y):
-            return gaussian(x) * sigmoid(y)
-
         self.fear_function = fear_function
 
         # Griglia per la mappa (2D colormap che rappresenta la "z")
@@ -50,6 +46,7 @@ class Realtime2DColorMapPlotter:
         self.Y = np.linspace(-1, 1, 100)
         self.Xm, self.Ym = np.meshgrid(self.X, self.Y)
         self.Zm = self.fear_function(self.Xm, self.Ym)
+        self.Zm = self.Zm/self.Zm.max()
 
         # Disegna la mappa statica (pcolormesh) e colorbar
         self.mesh = self.ax.pcolormesh(self.Xm, self.Ym, self.Zm, cmap="viridis", shading="auto", alpha=0.9)
