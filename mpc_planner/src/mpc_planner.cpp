@@ -160,7 +160,7 @@ namespace mpc_planner {
             + terminal_slack_penalty * s * s;
 
         // Cost for obstacle slack variables
-        double slack_penalty = 1e8;
+        double slack_penalty = 1e5;
 
         // Somma dei quadrati di tutti gli s_obs
         for (int idx = 0; idx < ns_obs; ++idx) {
@@ -379,7 +379,7 @@ namespace mpc_planner {
         cs::Dict opts;
         opts["ipopt.print_level"] = 0;
         opts["print_time"] = 0;
-        opts["ipopt.tol"] = 1e-4;
+        opts["ipopt.tol"] = 1e-3;
         opts["ipopt.max_iter"] = 50;
 
         solver_ = nlpsol("solver", "ipopt", nlp, opts);
@@ -732,6 +732,52 @@ namespace mpc_planner {
         std::cout << "  Orientation z-axis (radians) : " << goal_orient << std::endl;
 
 
+        U_previous = cs::DM::zeros(nu * Np);
+    
+        X_previous = cs::DM::zeros(nx * (Np + 1)); 
+        geometry_msgs::PoseStamped robot_pose_odom;
+        robot_pose_odom.header.frame_id = "odom";
+        robot_pose_odom.header.stamp = ros::Time(0); // latest available
+        robot_pose_odom.pose = current_odom_.pose.pose;
+
+        geometry_msgs::PoseStamped robot_pose_map;
+        try {
+            tf_->transform(robot_pose_odom, robot_pose_map, "map"); // trasforma in frame map
+        } catch (tf2::TransformException &ex) {
+            ROS_WARN("Transform from odom to map failed: %s", ex.what());
+            return false;
+        }
+
+        // ora robot_pose_map.pose.position contiene x,y in map frame
+        double x_map = robot_pose_map.pose.position.x;
+        double y_map = robot_pose_map.pose.position.y;
+        double theta_map = tf2::getYaw(robot_pose_map.pose.orientation);
+
+
+        // Extract odometry information from the "current_odom_" message
+        double x  = x_map;
+        double y = y_map;
+        double theta = theta_map;
+        cs::DM current_state = cs::DM::vertcat({x, y, theta});
+
+        std::cout << "Current state used as warm start:" << std::endl;
+
+        for (int k = 0; k <= Np; ++k) {
+            // Assegna il blocco di nx elementi (3: x,y,theta)
+            X_previous(cs::Slice(k * nx, k * nx + nx)) = current_state;
+            std::cout << current_state(0) << " " << current_state(1) << " " <<  current_state(2) << std::endl;
+        }
+        
+        // Reset slack variables
+        s_previous = cs::DM::zeros(ns);
+        s_obs_previous = cs::DM::zeros(Np * N_obs);
+
+        ROS_INFO("MPC Warm Start reset for new plan.");
+        
+        // Reset flag
+        goal_reached_ = false;
+
+
         return true;
     }
 
@@ -790,15 +836,26 @@ namespace mpc_planner {
         Eigen::Vector2d dist_from_goal = current_rob_pos - goal_pos;
         
         if(dist_from_goal.norm() <= distance_tolerance){
-            std::cout << "------------- Distanza raggiunta ----------------" << std::endl;
-            Eigen::Vector2d u_opt(0,0);
-            cmd_vel.linear.x = u_opt(0);
-            cmd_vel.angular.z = u_opt(1);
-            pub_cmd.publish(cmd_vel);
-            goal_reached_=true;
+            std::cout << "------------- DISTANCE REACHED ----------------" << std::endl;
+            // Eigen::Vector2d u_opt(0,0);
+            cmd_vel.linear.x = 0.0;
+
+            if (std::atan2(std::sin(goal_orient - current_rob_orient), std::cos(goal_orient - current_rob_orient))<=angle_tolerance){
+                std::cout<<"ORIENTATION REACHED"<<std::endl;
+                std::cout<<"GOAL REACHED"<<std::endl;
+                
+                cmd_vel.angular.z = 0.0;
+                goal_reached_=true;
+            }
+            else {
+                std::cout << "ORIENTATION NOT REACHED" << std::endl;
+
+                cmd_vel.angular.z = 0.5*std::atan2(std::sin(goal_orient - current_rob_orient), std::cos(goal_orient- current_rob_orient));
+            }            
+
         }
         else{
-            std::cout << "------------- Distanza non raggiunta ----------------" << std::endl;
+            std::cout << "------------- DISTANCE NOT REACHED ----------------" << std::endl;
 
             cs::DM p = cs::DM::zeros(nx + nx*(Np+1) + N_cost_params + nu + N_obs*N_obs_info, 1);
             p(0) = x;
@@ -827,7 +884,7 @@ namespace mpc_planner {
             try
             {            
                 if (N_obs != 0){
-                    std::cout << "Dimension of obstacle_list: " << obstacles_list.size() << std::endl;
+                    // std::cout << "Dimension of obstacle_list: " << obstacles_list.size() << std::endl;
                     for (int i=0; i<N_obs; i++){
                         p(weights_start_idx + N_cost_params + nu + N_obs_info*i +0) = obstacles_list[i].pos(0);
                         p(weights_start_idx + N_cost_params + nu + N_obs_info*i +1) = obstacles_list[i].pos(1);
@@ -835,28 +892,22 @@ namespace mpc_planner {
                         p(weights_start_idx + N_cost_params + nu + N_obs_info*i +3) = obstacles_list[i].vel(1);
                         p(weights_start_idx + N_cost_params + nu + N_obs_info*i +4) = obstacles_list[i].r;
 
-                        std::cout << "Position of the obstacle: " << obstacles_list[i].pos(0) << "  " << obstacles_list[i].pos(1)  << std::endl;
-                        std::cout << "Velocity of the obstacle: " << obstacles_list[i].vel(0) << "  " << obstacles_list[i].vel(1)  << std::endl;
-                        std::cout << "Radius of the obstacle: " << obstacles_list[i].r << std::endl;
+                        // std::cout << "Position of the obstacle: " << obstacles_list[i].pos(0) << "  " << obstacles_list[i].pos(1)  << std::endl;
+                        // std::cout << "Velocity of the obstacle: " << obstacles_list[i].vel(0) << "  " << obstacles_list[i].vel(1)  << std::endl;
+                        // std::cout << "Radius of the obstacle: " << obstacles_list[i].r << std::endl;
                     }
                 }
-                std::cout << "obstacle inserted" << std::endl;
+                // std::cout << "obstacle inserted" << std::endl;
             }
             catch(const std::exception& e)
             {
                 std::cerr << e.what() << '\n';
             }
             
-            // std::cout << "CHECK OF p VALUES:" << std::endl;
-            std::cout << "Dimension of p:" << (int)p.size1() << std::endl;
-            // std::cout << "Position of the obstacle: " << p(78) << "  " << p(78+1) << std::endl;
-            // std::cout << "Velocity of the obstacle: " << p(78+2) << "  " << p(78+3)  << std::endl;
-            // std::cout << "Radius of the obstacle: " << p(78+4) << std::endl;
 
-            // prepara arg e chiama solver (warm-start se vuoi)
-            cs::DM x0 = cs::DM::vertcat(std::vector<cs::DM>{X_previous, U_previous, s_previous, s_obs_previous});
+            // prepara arg e chiama solver (warm-start)
             std::map<std::string, cs::DM> arg;
-            arg["x0"]   = x0;
+            arg["x0"]   = cs::DM::vertcat(std::vector<cs::DM>{X_previous, U_previous, s_previous, s_obs_previous});
             arg["lbx"]  = lbx_full;
             arg["ubx"]  = ubx_full;
             arg["lbg"]  = lbg;
@@ -878,201 +929,214 @@ namespace mpc_planner {
                 ROS_ERROR("Exception getting solution: %s", e.what());
                 return false;
             }
-
+            
             auto stats = solver_.stats();
             std::string status = static_cast<std::string>(stats["return_status"]);
-            if (status == "Solve_Succeeded" || status == "Feasible_Point_Found") {
-                std::cout << "✅ Solver ha trovato una soluzione ammissibile.\n";
+
+            if (status == "Solve_Succeeded" || status == "Feasible_Point_Found" || status == "Maximum_Iterations_Exceeded") {
+
+                std::cout << "✅ Feasible solution found.\n";
+
+                if (status == "Maximum_Iterations_Exceeded"){
+                    ROS_WARN("Maximum_Iterations_Exceeded");
+                }
+
+                cs::DM X_opt= solution(cs::Slice(0, nx*(Np+1)));                               // primi nx*(Np+1) valori → stati
+                std::cout << "X: " << X_opt.size1() << std::endl;
+                cs::DM U_opt = solution(cs::Slice(nx*(Np+1), nx*(Np+1)+nu*Np));                 // restanti nu*Np valori → controlli
+                std::cout << "U: " << U_opt.size1() << std::endl;
+                cs::DM s_opt = solution(cs::Slice(nx*(Np+1) + nu*Np, nx*(Np+1) + nu*Np + ns));   
+                std::cout << "s: " << s_opt.size1() << std::endl;
+                cs::DM s_obs_opt = solution(cs::Slice(nx*(Np+1) + nu*Np + ns, nx*(Np+1) + nu*Np + ns + Np*N_obs)) ;
+                std::cout << "s_obs: " << s_obs_opt.size1() << std::endl;
+
+                std::cout << "Dimension of solution: " << (int)solution.size1() << std::endl;
+
+
+                double state_cost = 0.0;
+                double input_cost = 0.0;
+                double obstacle_cost = 0.0;
+                double slack_terminal_cost = 0.0;
+                double slack_obs_cost = 0.0;
+
+                for (int k = 0; k < Np; ++k) {
+                    // --- Stati ---
+                    double x = X_opt(nx*k + 0).scalar();
+                    double y = X_opt(nx*k + 1).scalar();
+                    double th = X_opt(nx*k + 2).scalar();
+
+                    double x_r = p(nx + nx*k + 0).scalar();
+                    double y_r = p(nx + nx*k + 1).scalar();
+                    double th_r = p(nx + nx*k + 2).scalar();
+
+                    double dth = std::atan2(std::sin(th_r - th), std::cos(th_r - th));
+
+                    state_cost += Q(0) * (x_r - x)*(x_r - x)
+                                + Q(1) * (y_r - y)*(y_r - y)
+                                + Q(2) * dth*dth;
+
+                    // --- Input ---
+                    double v = U_opt(nu*k + 0).scalar();
+                    double w = U_opt(nu*k + 1).scalar();
+                    input_cost += R(0) * v*v + R(1) * w*w;
+
+                    // --- Obstacle ---
+                    for (int j = 0; j < N_obs; ++j) {
+                        int idx_obs = j*Np + k;
+                        double obs_x = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 0).scalar();
+                        double obs_y = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 1).scalar();
+                        double obs_vx = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 2).scalar();
+                        double obs_vy = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 3).scalar();
+
+                        double fut_obs_x = obs_x + k*dt*obs_vx;
+                        double fut_obs_y = obs_y + k*dt*obs_vy;
+
+                        double dx = x - fut_obs_x;
+                        double dy = y - fut_obs_y;
+                        double distance = std::sqrt(dx*dx + dy*dy);
+
+                        obstacle_cost += -alfa * std::log(beta * distance); //alfa/(0.05*(distance * distance));
+
+                        // std::cout << "Distance from obstacle: " << distance << std::endl;
+
+                        // Slack cost per questo ostacolo
+                        double s_jk = s_obs_opt(idx_obs).scalar();
+                        slack_obs_cost += 1e8 * s_jk * s_jk;
+                    }
+                }
+
+
+                // --- Terminal cost ---
+                double xN = X_opt(nx*Np + 0).scalar();
+                double yN = X_opt(nx*Np + 1).scalar();
+                double thN = X_opt(nx*Np + 2).scalar();
+
+                double x_rN = p(nx + nx*Np + 0).scalar();
+                double y_rN = p(nx + nx*Np + 1).scalar();
+                double th_rN = p(nx + nx*Np + 2).scalar();
+
+                double dth_N = std::atan2(std::sin(th_rN - thN), std::cos(th_rN - thN));
+                state_cost += P(0) * (x_rN - xN)*(x_rN - xN)
+                            + P(1) * (y_rN - yN)*(y_rN - yN)
+                            + P(2) * dth_N*dth_N;
+
+                // --- Terminal slack ---
+                for (int i = 0; i < ns; ++i) {
+                    slack_terminal_cost += 30 * s_opt(i).scalar() * s_opt(i).scalar();
+                }
+
+                // --- Costo totale ---
+                double J_total = state_cost + input_cost + obstacle_cost + slack_terminal_cost + slack_obs_cost;
+
+                std::cout << "Costo totale: " << J_total << std::endl;
+                std::cout << "Stato: " << state_cost << ", Input: " << input_cost 
+                        << ", Ostacoli: " << obstacle_cost 
+                        << ", Slack terminale: " << slack_terminal_cost
+                        << ", Slack ostacoli: " << slack_obs_cost << std::endl;
+
+            
+                // Extracion of the first control input
+                cmd_vel.linear.x = double(U_opt(0));
+                cmd_vel.angular.z = double(U_opt(1));
+                
+                // Shift inputs
+                for (int k = 0; k < Np-1; ++k) {
+                    U_previous(nu*k + 0) = U_opt(nu*(k+1) + 0);
+                    U_previous(nu*k + 1) = U_opt(nu*(k+1) + 1);
+                }
+                // Ultimo input: ripeti l’ultimo della precedente previsione
+                U_previous(nu*(Np-1) + 0) = U_opt(nu*(Np-1) + 0);
+                U_previous(nu*(Np-1) + 1) = U_opt(nu*(Np-1) + 1);
+
+                // Shift stati
+                for (int k = 0; k < Np; ++k) {
+                    X_previous(nx*k + 0) = X_opt(nx*(k+1) + 0);
+                    X_previous(nx*k + 1) = X_opt(nx*(k+1) + 1);
+                    X_previous(nx*k + 2) = X_opt(nx*(k+1) + 2);
+                }
+                // Stato terminale: mantieni ultimo
+                X_previous(nx*Np + 0) = X_opt(nx*Np + 0);
+                X_previous(nx*Np + 1) = X_opt(nx*Np + 1);
+                X_previous(nx*Np + 2) = X_opt(nx*Np + 2);
+
+                // Primo stato della previsione = stato reale corrente del robot
+                X_previous(0) = x;
+                X_previous(1) = y;
+                X_previous(2) = theta;
+
+                s_previous = s_opt;
+
+                for (int j = 0; j < N_obs; ++j) {
+                    for (int k = 0; k < Np-1; ++k) {
+                        int idx = j*Np + k;
+                        int idx_next = j*Np + (k+1);
+                        s_obs_previous(idx) = s_obs_opt(idx_next);
+                    }
+                    // ultimo step
+                    s_obs_previous(j*Np + (Np-1)) = s_obs_opt(j*Np + (Np-1));
+                }
+                
+                // Show the generated optimized path
+                nav_msgs::Path path_msg;
+                path_msg.header.stamp = ros::Time::now();
+                std::string frame = "odom";
+                
+                if (!goal_pose_.header.frame_id.empty()) frame = goal_pose_.header.frame_id;
+                path_msg.header.frame_id = frame;
+
+                for (int k = 0; k <= Np; ++k) {
+                    // indice base nello slice X_opt (X_opt è vettore [x0,y0,th0, x1,y1,th1, ...])
+                    int base = nx * k;
+                    double xk = double(X_opt(base + 0));
+                    double yk = double(X_opt(base + 1));
+                    double thk = double(X_opt(base + 2));
+
+                    geometry_msgs::PoseStamped ps;
+                    ps.header = path_msg.header;
+                    ps.header.stamp = ros::Time::now(); // o la stessa stamp di path_msg
+                    ps.pose.position.x = xk;
+                    ps.pose.position.y = yk;
+                    ps.pose.position.z = 0.0;
+
+                    tf2::Quaternion q;
+                    q.setRPY(0.0, 0.0, thk);
+                    ps.pose.orientation = tf2::toMsg(q);
+
+                    path_msg.poses.push_back(ps);
+                }
+
+                // std::cout << "Dimension of path_msg: " << (int)path_msg.poses.size() << std::endl;
+
+                pub_optimal_traj.publish(path_msg);
+
+
+
+
             } else {
                 std::cout << "❌ Solver non ha trovato una soluzione feasible. Stato: " << status << "\n";
-            }
+                // ROS_ERROR("Feasible solution not found");
 
-            std::cout << "Dimension of solution: " << (int)solution.size1() << std::endl;
-
-            cs::DM X_opt = solution(cs::Slice(0, nx*(Np+1)));                               // primi nx*(Np+1) valori → stati
-            std::cout << "X: " << X_opt.size1() << std::endl;
-            cs::DM U_opt = solution(cs::Slice(nx*(Np+1), nx*(Np+1)+nu*Np));                 // restanti nu*Np valori → controlli
-            std::cout << "U: " << U_opt.size1() << std::endl;
-            cs::DM s_opt = solution(cs::Slice(nx*(Np+1) + nu*Np, nx*(Np+1) + nu*Np + ns));   
-            std::cout << "s: " << s_opt.size1() << std::endl;
-            cs::DM s_obs_opt = solution(cs::Slice(nx*(Np+1) + nu*Np + ns, nx*(Np+1) + nu*Np + ns + Np*N_obs)) ;
-            std::cout << "s_obs: " << s_obs_opt.size1() << std::endl;
-
-            // std::cout << "Dimension of X_opt: " << (int)X_opt.size1() << std::endl;
-            // std::cout << "Dimension of U_opt: " << (int)U_opt.size1() << std::endl;
-
-            // std::cout << "Final point of the optimal trajectory: " << X_opt(nx*(Np+1)-3) << " " << X_opt(nx*(Np+1)-2) << std::endl;
-            // std::cout << "Final point of the reference trajectory: " << p(nx*(Np+1) + 0) << " " << p(nx*(Np+1) + 1) << std::endl;
-
-            double state_cost = 0.0;
-            double input_cost = 0.0;
-            double obstacle_cost = 0.0;
-            double slack_terminal_cost = 0.0;
-            double slack_obs_cost = 0.0;
-
-            for (int k = 0; k < Np; ++k) {
-                // --- Stati ---
-                double x = X_opt(nx*k + 0).scalar();
-                double y = X_opt(nx*k + 1).scalar();
-                double th = X_opt(nx*k + 2).scalar();
-
-                double x_r = p(nx + nx*k + 0).scalar();
-                double y_r = p(nx + nx*k + 1).scalar();
-                double th_r = p(nx + nx*k + 2).scalar();
-
-                double dth = std::atan2(std::sin(th_r - th), std::cos(th_r - th));
-
-                state_cost += Q(0) * (x_r - x)*(x_r - x)
-                            + Q(1) * (y_r - y)*(y_r - y)
-                            + Q(2) * dth*dth;
-
-                // --- Input ---
-                double v = U_opt(nu*k + 0).scalar();
-                double w = U_opt(nu*k + 1).scalar();
-                input_cost += R(0) * v*v + R(1) * w*w;
-
-                // --- Obstacle ---
-                for (int j = 0; j < N_obs; ++j) {
-                    int idx_obs = j*Np + k;
-                    double obs_x = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 0).scalar();
-                    double obs_y = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 1).scalar();
-                    double obs_vx = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 2).scalar();
-                    double obs_vy = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 3).scalar();
-
-                    double fut_obs_x = obs_x + k*dt*obs_vx;
-                    double fut_obs_y = obs_y + k*dt*obs_vy;
-
-                    double dx = x - fut_obs_x;
-                    double dy = y - fut_obs_y;
-                    double distance = std::sqrt(dx*dx + dy*dy);
-
-                    obstacle_cost += -alfa * std::log(beta * distance); //alfa/(0.05*(distance * distance));
-
-                    // std::cout << "Distance from obstacle: " << distance << std::endl;
-
-                    // Slack cost per questo ostacolo
-                    double s_jk = s_obs_opt(idx_obs).scalar();
-                    slack_obs_cost += 1e8 * s_jk * s_jk;
+                // Stop robot
+                // cmd_vel.linear.x = 0.0;
+                // cmd_vel.angular.z = 0.0;
+                
+                // Reset warm start per tentare un "Cold Start" al prossimo loop
+                U_previous = cs::DM::zeros(nu * Np);
+                X_previous = cs::DM::zeros(nx * (Np + 1)); 
+                // Opzionale: Riempi X_previous con lo stato corrente ripetuto per aiutare il solver
+                for(int k=0; k<=Np; k++){
+                    X_previous(cs::Slice(k*nx, k*nx+nx)) = cs::DM::vertcat({x, y, theta});
                 }
+
             }
 
+        std::cout << "\nVelocity message published\n" << std::endl;
+        std::cout << "Linear velocity: " << cmd_vel.linear.x  << std::endl;
+        std::cout << "Angular velocity: " << cmd_vel.angular.z  << std::endl;
+        std::cout << "\n-------------------------------------------------------------------\n\n\n" << std::endl;
 
-            // --- Terminal cost ---
-            double xN = X_opt(nx*Np + 0).scalar();
-            double yN = X_opt(nx*Np + 1).scalar();
-            double thN = X_opt(nx*Np + 2).scalar();
-
-            double x_rN = p(nx + nx*Np + 0).scalar();
-            double y_rN = p(nx + nx*Np + 1).scalar();
-            double th_rN = p(nx + nx*Np + 2).scalar();
-
-            double dth_N = std::atan2(std::sin(th_rN - thN), std::cos(th_rN - thN));
-            state_cost += P(0) * (x_rN - xN)*(x_rN - xN)
-                        + P(1) * (y_rN - yN)*(y_rN - yN)
-                        + P(2) * dth_N*dth_N;
-
-            // --- Terminal slack ---
-            for (int i = 0; i < ns; ++i) {
-                slack_terminal_cost += 30 * s_opt(i).scalar() * s_opt(i).scalar();
-            }
-
-            // --- Costo totale ---
-            double J_total = state_cost + input_cost + obstacle_cost + slack_terminal_cost + slack_obs_cost;
-
-            std::cout << "Costo totale: " << J_total << std::endl;
-            std::cout << "Stato: " << state_cost << ", Input: " << input_cost 
-                    << ", Ostacoli: " << obstacle_cost 
-                    << ", Slack terminale: " << slack_terminal_cost
-                    << ", Slack ostacoli: " << slack_obs_cost << std::endl;
-
-
-
-
-
-
-
-
-          
-            // Extracion of the first control input
-            cmd_vel.linear.x = double(U_opt(0));
-            cmd_vel.angular.z = double(U_opt(1));
-            pub_cmd.publish(cmd_vel);
-
-            // Shift inputs
-            for (int k = 0; k < Np-1; ++k) {
-                U_previous(nu*k + 0) = U_opt(nu*(k+1) + 0);
-                U_previous(nu*k + 1) = U_opt(nu*(k+1) + 1);
-            }
-            // Ultimo input: ripeti l’ultimo della precedente previsione
-            U_previous(nu*(Np-1) + 0) = U_opt(nu*(Np-1) + 0);
-            U_previous(nu*(Np-1) + 1) = U_opt(nu*(Np-1) + 1);
-
-            // Shift stati
-            for (int k = 0; k < Np; ++k) {
-                X_previous(nx*k + 0) = X_opt(nx*(k+1) + 0);
-                X_previous(nx*k + 1) = X_opt(nx*(k+1) + 1);
-                X_previous(nx*k + 2) = X_opt(nx*(k+1) + 2);
-            }
-            // Stato terminale: mantieni ultimo
-            X_previous(nx*Np + 0) = X_opt(nx*Np + 0);
-            X_previous(nx*Np + 1) = X_opt(nx*Np + 1);
-            X_previous(nx*Np + 2) = X_opt(nx*Np + 2);
-
-            // Primo stato della previsione = stato reale corrente del robot
-            X_previous(0) = x;
-            X_previous(1) = y;
-            X_previous(2) = theta;
-
-            s_previous = s_opt;
-
-            for (int j = 0; j < N_obs; ++j) {
-                for (int k = 0; k < Np-1; ++k) {
-                    int idx = j*Np + k;
-                    int idx_next = j*Np + (k+1);
-                    s_obs_previous(idx) = s_obs_opt(idx_next);
-                }
-                // ultimo step
-                s_obs_previous(j*Np + (Np-1)) = s_obs_opt(j*Np + (Np-1));
-            }
+        pub_cmd.publish(cmd_vel);
             
-            // Show the generated optimized path
-            nav_msgs::Path path_msg;
-            path_msg.header.stamp = ros::Time::now();
-            std::string frame = "odom";
-            
-            if (!goal_pose_.header.frame_id.empty()) frame = goal_pose_.header.frame_id;
-            path_msg.header.frame_id = frame;
-
-            for (int k = 0; k <= Np; ++k) {
-                // indice base nello slice X_opt (X_opt è vettore [x0,y0,th0, x1,y1,th1, ...])
-                int base = nx * k;
-                double xk = double(X_opt(base + 0));
-                double yk = double(X_opt(base + 1));
-                double thk = double(X_opt(base + 2));
-
-                geometry_msgs::PoseStamped ps;
-                ps.header = path_msg.header;
-                ps.header.stamp = ros::Time::now(); // o la stessa stamp di path_msg
-                ps.pose.position.x = xk;
-                ps.pose.position.y = yk;
-                ps.pose.position.z = 0.0;
-
-                tf2::Quaternion q;
-                q.setRPY(0.0, 0.0, thk);
-                ps.pose.orientation = tf2::toMsg(q);
-
-                path_msg.poses.push_back(ps);
-            }
-
-            // std::cout << "Dimension of path_msg: " << (int)path_msg.poses.size() << std::endl;
-
-            pub_optimal_traj.publish(path_msg);
-
-            std::cout << "\nmessaggio pubblicato\n" << std::endl;
-            std::cout << "Linear velocity: " << cmd_vel.linear.x  << std::endl;
-            std::cout << "Angular velocity: " << cmd_vel.angular.z  << std::endl;
-            std::cout << "\n-------------------------------------------------------------------\n\n\n" << std::endl;
-
         }
 
         return true;
@@ -1206,22 +1270,6 @@ namespace mpc_planner {
         ref_pose_array.header.stamp = ros::Time::now();
         ref_pose_array.header.frame_id = "map";  // o il frame corretto per il tuo caso
         pub_ref_posearray.publish(ref_pose_array);
-
-         // ---- PRINT per debug ----
-        // std::cout << "=== Traiettoria di riferimento (Np punti) ===" << std::endl;
-        // for (int k = 0; k < Np_; ++k) {
-        //     std::cout << "Point " << k << ": x=" << p_(3 + 3*k + 0) << ", y=" << p_(3 + 3*k + 1) << ", theta=" << p_(3 + 3*k + 2) << std::endl;
-        // }
-
-        // std::cout << "=== Punto finale traiettoria di riferimento ===" << std::endl;
-        // std::cout << "Point " << Np_-1 << ": x=" << p_(3 + 3*(Np-1) + 0) << ", y=" << p_(3 + 3*(Np_-1) + 1) << ", theta=" << p_(3 + 3*(Np_-1) + 2) << std::endl;
-
-        // std::cout << "--- Goal finale ---" << std::endl;
-        // const auto& goal = global_plan_.back();
-        // double goal_x = goal.pose.position.x;
-        // double goal_y = goal.pose.position.y;
-        // double goal_yaw = tf2::getYaw(goal.pose.orientation);
-        // std::cout << "Goal x=" << goal_x << ", y=" << goal_y << ", yaw=" << goal_yaw << std::endl;
         }
 
     // void MpcPlanner::loadParameters() {

@@ -94,7 +94,7 @@ private:
     double robot_width = 0.8;
     double dt = 0.2;        // Timestep
     double v_max = 0.5;
-    double v_min = 0;
+    double v_min = -0.5;
     double w_max = 2;
     double w_min = -2;
     double delta_v_max = 0.5;  // [m/s per step] esempio: variazione massima velocità lineare
