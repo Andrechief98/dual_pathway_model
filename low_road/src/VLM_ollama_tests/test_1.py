@@ -1,15 +1,17 @@
 from ollama import chat
 import time
 import json
-# from pathlib import Path
+import os
 
-# Pass in the path to the image
-path = "/home/andrea/Scaricati/runner.jpeg"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+image_rel_path = "/ollama_test_images/runner.jpeg"
+full_path = os.path.join(script_dir, image_rel_path)
 
-# You can also pass in base64 encoded image data
-# img = base64.b64encode(Path(path).read_bytes()).decode()
-# or the raw bytes
-# img = Path(path).read_bytes()
+# TEST_1: PHYSICAL INFORMATION UNDERSTANDING AND CONTEXTUALIZED DESCRIPTION
+# The idea is to provide an image along with physical information to the model in order to:
+# 1) understand if it is able to understand it
+# 2) contextualize the description of what is seeing
+# 3) measure the inference time required by the model
 
 
 if __name__ == "__main__":
@@ -19,8 +21,8 @@ if __name__ == "__main__":
     messages=[
         {
         'role': 'user',
-        'content': f'Describe what the subject of the image is doing considering provided information. Be concise and coherent with information provided.',
-        'images': [path],
+        'content': 'Describe what the subject of the image is doing considering provided information. Be concise and coherent with information provided.',
+        'images': [full_path],
         }
     ]
 
@@ -41,14 +43,10 @@ if __name__ == "__main__":
                 *messages, 
                 {
                     'role': 'user', 
-                    'content': "/nothink" + user_input,
-                    'images':[path]
+                    'content': user_input,
+                    'images':[full_path]
                     }
                 ],
-            think=False,
-            options={
-                "num_ctx": 2048
-            }
         )
         end_time = time.perf_counter()
 
