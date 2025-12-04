@@ -1,0 +1,38 @@
+{
+    "qwen2.5vl:3b": {
+        "trial_1": [
+            {
+                "velocity": 25,
+                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with one foot off the ground and the other foot extended forward, indicating they are preparing to sprint.",
+                "inference_time": 4.6925
+            },
+            {
+                "velocity": 10,
+                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with one foot off the ground and the other foot extended forward, indicating they are preparing to sprint.",
+                "inference_time": 5.0093
+            },
+            {
+                "velocity": 0,
+                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with both feet off the ground, indicating they are preparing to sprint.",
+                "inference_time": 4.6427
+            }
+        ],
+        "trial_2": [
+            {
+                "velocity": 25,
+                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with one foot off the ground and the other foot extended forward, indicating they are preparing to sprint.",
+                "inference_time": 4.5796
+            },
+            {
+                "velocity": 10,
+                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with one foot off the ground and the other foot extended forward, indicating they are preparing to sprint.",
+                "inference_time": 4.9587
+            },
+            {
+                "velocity": 0,
+                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with both feet off the ground, indicating they are preparing to sprint.",
+                "inference_time": 4.6211
+            }
+        ]
+    }
+}
