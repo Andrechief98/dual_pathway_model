@@ -1,38 +1,86 @@
 {
-    "qwen2.5vl:3b": {
-        "trial_1": [
-            {
-                "velocity": 25,
-                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with one foot off the ground and the other foot extended forward, indicating they are preparing to sprint.",
-                "inference_time": 4.6925
-            },
-            {
-                "velocity": 10,
-                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with one foot off the ground and the other foot extended forward, indicating they are preparing to sprint.",
-                "inference_time": 5.0093
-            },
-            {
-                "velocity": 0,
-                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with both feet off the ground, indicating they are preparing to sprint.",
-                "inference_time": 4.6427
-            }
-        ],
-        "trial_2": [
-            {
-                "velocity": 25,
-                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with one foot off the ground and the other foot extended forward, indicating they are preparing to sprint.",
-                "inference_time": 4.5796
-            },
-            {
-                "velocity": 10,
-                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with one foot off the ground and the other foot extended forward, indicating they are preparing to sprint.",
-                "inference_time": 4.9587
-            },
-            {
-                "velocity": 0,
-                "response": "The subject of the image is a runner in a starting position on a track. The runner is in a crouched position, with both feet off the ground, indicating they are preparing to sprint.",
-                "inference_time": 4.6211
-            }
-        ]
+    "qwen3-vl:2b-instruct": {
+        "trial_1": {
+            "response": "The image shows a runner on a track during a sprint. During the time interval from 0 to 1 second, the velocity is 0 m/s. From 1 to 2 seconds, the velocity increases from 10 m/s to 25 m/s.",
+            "inference_time": 0.2813
+        },
+        "trial_2": {
+            "response": "Based on the provided velocity information, the runner is at rest at the beginning of the motion. As the time progresses, the velocity increases steadily over the 2-second interval shown.",
+            "inference_time": 0.167
+        },
+        "trial_3": {
+            "response": "The image shows a track and field athlete in the starting phase of a race. The velocity of the athlete is as follows: at time 0, the velocity is 0 m/s. At time 1, the velocity is 10 m/s. At time 2, the velocity is 25 m/s. This sequence of velocity values indicates a significant increase in speed over the first few seconds of the race.",
+            "inference_time": 0.3254
+        }
+    },
+    "qwen3-vl:4b-instruct": {
+        "trial_1": {
+            "response": "The runner is accelerating: velocity increases from 0 m/s at t=0 to 10 m/s at t=1, then to 25 m/s at t=2.",
+            "inference_time": 2.7374
+        },
+        "trial_2": {
+            "response": "At t=0 s, the runner is stationary (v=0 m/s). At t=1 s, they accelerate to 10 m/s. By t=2 s, velocity has increased to 25 m/s, indicating continuous positive acceleration during the sprint.",
+            "inference_time": 0.3257
+        },
+        "trial_3": {
+            "response": "At t=0 s, the runner starts from rest (velocity = 0 m/s).  \nAt t=1 s, the runner reaches 10 m/s.  \nAt t=2 s, the runner accelerates to 25 m/s, indicating rapid forward motion.",
+            "inference_time": 0.3435
+        }
+    },
+    "qwen3-vl:8b-instruct": {
+        "trial_1": {
+            "response": "At t=0s, velocity is 0 m/s (starting position). At t=1s, velocity is 10 m/s (accelerating). At t=2s, velocity is 25 m/s (high speed). The runner is accelerating rapidly from the starting blocks.",
+            "inference_time": 0.4964
+        },
+        "trial_2": {
+            "response": "The athlete is accelerating rapidly from rest, with velocity increasing from 0 m/s to 25 m/s over two seconds, indicating explosive power and high acceleration.",
+            "inference_time": 0.2967
+        },
+        "trial_3": {
+            "response": "The athlete is accelerating rapidly from rest. At t=0s, velocity is 0 m/s. By t=1s, velocity reaches 10 m/s. At t=2s, velocity increases further to 25 m/s, indicating a high rate of acceleration during the initial phase of the sprint.",
+            "inference_time": 0.5338
+        }
+    },
+    "gemma3:4b": {
+        "trial_1": {
+            "response": "Here's a concise description of the runner\u2019s actions, considering the velocity data provided:\n\n**At t=0 seconds:** The runner is stationary on the starting blocks, having a velocity of 0 m/s. \n\n**At t=1 second:** The runner begins to accelerate, reaching a velocity of 10 m/s.\n\n**At t=2 seconds:** The runner's velocity has increased to 25 m/s, indicating a significant acceleration.",
+            "inference_time": 0.7074
+        },
+        "trial_2": {
+            "response": "Here\u2019s a concise description of the runner's actions based on the provided velocity data:\n\n**Initial State (Time 0s):** The runner begins in the starting position with a velocity of 0 m/s.\n\n**Acceleration (Time 1-2s):** From 1 second, the runner rapidly accelerates, reaching a velocity of 10 m/s by 1 second, and further accelerating to 25 m/s by 2 seconds. \n\nThis indicates a burst of speed as the runner begins their sprint.",
+            "inference_time": 0.7747
+        },
+        "trial_3": {
+            "response": "Here\u2019s a concise description of the runner\u2019s actions based on the provided velocity data:\n\n**Initial Stage (0-1 second):** The runner begins the race from the starting block with a standstill velocity of 0 m/s.\n\n**Acceleration (1-2 seconds):**  Within the first second, the runner rapidly accelerates, reaching a velocity of 10 m/s.  By the second second, the runner\u2019s speed increases further to 25 m/s.",
+            "inference_time": 0.7282
+        }
+    },
+    "gemma3:12b": {
+        "trial_1": {
+            "response": "The runner is sprinting. At time 0, they're just starting with a velocity of 0 m/s. By time 1, their velocity increases to 10 m/s, and by time 2, it reaches 25 m/s.",
+            "inference_time": 0.8315
+        },
+        "trial_2": {
+            "response": "The runner is sprinting. At time instant 0, the velocity is 0 m/s, indicating a starting position. At time instant 1, the velocity reaches 10 m/s, showcasing initial acceleration. By time instant 2, the velocity is 25 m/s, signifying a rapid increase in speed.",
+            "inference_time": 1.0325
+        },
+        "trial_3": {
+            "response": "The runner is sprinting. At time instant 0, they are stationary (0 m/s). At time instant 1, they's moving at 10 m/s, and by time instant 2, their velocity has accelerated to 25 m/s.",
+            "inference_time": 0.8645
+        }
+    },
+    "llama3.2-vision": {
+        "trial_1": {
+            "response": "The subject of the image is running. \n\nAt time instant 0, the runner is not moving. \nAt time instant 1, the runner is moving at a speed of 10 m/s. \nAt time instant 2, the runner is moving at a speed of 25 m/s.",
+            "inference_time": 0.7774
+        },
+        "trial_2": {
+            "response": "The subject of the image, a runner, is sprinting. At time instant 0, the runner is at rest. At time instant 1, the runner's velocity is 10 m/s. At time instant 2, the runner's velocity is 25 m/s. The runner is accelerating.",
+            "inference_time": 0.7797
+        },
+        "trial_3": {
+            "response": "The subject of the image, a runner, is running at an increasing velocity over time.\n\n- At time instant 0, the runner has a velocity of 0 m/s, which means they are not moving.\n- At time instant 1, the runner's velocity is 10 m/s, which means they are moving at a speed of 10 m/s.\n- At time instant 2, the runner\u2019s velocity is 25 m/s, which means they are moving at a speed of 25 m/s.",
+            "inference_time": 1.2422
+        }
     }
 }
