@@ -2,6 +2,41 @@ from ollama import chat
 import time
 import json
 import os
+from typing import List
+from pydantic import BaseModel
+
+class MostDangerousObstacle(BaseModel):
+    object_id: float
+    name:str
+    dangerousness: float
+    reason: str
+
+class FarthestObject(BaseModel):
+    object_id: float
+    name: str
+    relative_distance: float
+
+class Object(BaseModel):
+    object_id: float
+    name: str
+
+class ObjectFeatures(BaseModel):
+    object_id: float
+    name: str
+    attributes: str
+    relative_distance: float
+    relative_angle: float
+    action: str
+    dangerousness: float
+
+class ImageDescription(BaseModel):
+    summary: str
+    farthest_object: FarthestObject
+    objects: List[Object]
+    most_dangerous_object: MostDangerousObstacle
+    objects_features: List[ObjectFeatures]
+
+
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,8 +53,10 @@ responses_full_path = os.path.join(script_dir, responses_rel_path)
 # 3) measure the inference time required by the model
 
 if __name__ == "__main__":
-    model_to_test = "qwen2.5vl:3b" 
-    n_trials = 2
+    model_to_test = "gemma3:4b" 
+    n_trials = 3
+    streaming = False
+
     with open(responses_full_path) as f:
         responses = json.load(f)
 
@@ -36,11 +73,13 @@ if __name__ == "__main__":
                 - 0 radians means in front of you;
                 - the angle becomes positive towards left 
                 - the angle becomes negative towards right
-            Your goal is to understand and couple visual information with both physical and spatial information. Based on such understanding, you must reply to the following questions:
+            Your goal is to understand and match visual information with both physical and spatial information. Based on such understanding, you must reply to the following questions:
             1) What is the farthest object from you?
             2) Provide the corresponding name that identifies the object_1, object_2, object_3
-            3) Describe which could be the most dangerous object.
-            4) Extract and describe revelant features of each object''',
+            3) Describe which could be the most dangerous object using a float value between 0 and 1.
+            4) Extract and describe revelant features of each object
+            
+            Return the response following the provided JSON format.''',
             }
         ]
 
@@ -48,11 +87,11 @@ if __name__ == "__main__":
         user_input = {
             "image_spatial_physical_info":{
                 "object_1":{
-                    "relative_angle": -1.57,
+                    "relative_angle": 1.57,
                     "relative_distance": 2
                 },
                 "object_2":{
-                    "relative_angle": 1.57,
+                    "relative_angle": -1.57,
                     "relative_distance": 3
                 },
                 "object_3":{
@@ -74,24 +113,55 @@ if __name__ == "__main__":
                     'images':[image_full_path]
                     }
                 ],
+            format=ImageDescription.model_json_schema(),
+            options={'temperature': 0.1},
+            stream=streaming
         )
-        end_time = time.perf_counter()
+        
+        if streaming:
+            full_response_content = ""
+            for chunk in response:
+                print(chunk['message']['content'], end='', flush=True) 
+                full_response_content += chunk['message']['content']
 
-        inference_time = round(end_time-start_time,4)
-        print(f"Inference time: {inference_time}")
+            end_time = time.perf_counter()
 
-        # Add the response to the messages to maintain the history
-        messages += [
-            {'role': 'user', 'content': user_input},
-            {'role': 'assistant', 'content': response.message.content},
-        ]
-        print(response.message.content + '\n')
+            inference_time = round(end_time-start_time,4)
+            print(f"Inference time: {inference_time}")
 
-        trial_str = "trial_" + str(trial+1)
-        responses[model_to_test][trial_str]={
-            "response" : response.message.content,
-            "inference_time" : inference_time
-        }
+            # Add the response to the messages to maintain the history
+            messages += [
+                {'role': 'user', 'content': user_input},
+                {'role': 'assistant', 'content': full_response_content},
+            ]
+            
+            trial_str = "trial_" + str(trial+1)
+            responses[model_to_test][trial_str]={
+                "response" : json.loads(full_response_content),
+                "inference_time" : inference_time
+            }
+
+        else:
+            end_time = time.perf_counter()
+
+            inference_time = round(end_time-start_time,4)
+            print(f"Inference time: {inference_time}")
+
+            image_description = ImageDescription.model_validate_json(response.message.content)
+            print(image_description)
+            print()
+
+            # Add the response to the messages to maintain the history
+            messages += [
+                {'role': 'user', 'content': user_input},
+                {'role': 'assistant', 'content': response.message.content},
+            ]
+            
+            trial_str = "trial_" + str(trial+1)
+            responses[model_to_test][trial_str]={
+                "response" : json.loads(response.message.content),
+                "inference_time" : inference_time
+            }
     
     with open(responses_full_path, "w") as f:
         json.dump(responses, f, indent=4)
