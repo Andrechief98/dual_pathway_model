@@ -239,163 +239,83 @@
             }
         ]
     },
-    "gemma3:4b": {
+    "llama3.2-vision:latest": {
         "trial_1": [
             {
                 "velocity": 25,
                 "response": {
-                    "summary": "The runner is in the initial phase of a sprint, having just left the starting blocks with a velocity of 25 m/s.",
-                    "action": "The runner is accelerating rapidly from the starting blocks, extending their legs and arms to propel themselves forward."
+                    "summary": "The runner is sprinting, maintaining a constant speed of 25 m/s.",
+                    "action": "sprinting"
                 },
-                "inference_time": 1.2991
+                "inference_time": 1.4523
             },
             {
                 "velocity": 10,
                 "response": {
-                    "summary": "The runner is in the midst of the sprint, with a reduced velocity of 10 m/s.",
-                    "action": "The runner is continuing to accelerate, though at a slower pace than the initial burst."
+                    "summary": "The runner is decelerating, reducing their speed from 25 m/s to 10 m/s.",
+                    "action": "decelerating"
                 },
-                "inference_time": 0.8438
+                "inference_time": 1.4356
             },
             {
                 "velocity": 0,
                 "response": {
-                    "summary": "The runner has come to a complete stop.",
-                    "action": "The runner has decelerated to a halt, likely due to fatigue or reaching the end of their initial acceleration phase."
+                    "summary": "The runner has come to a complete stop, having decelerated from 25 m/s to 0 m/s.",
+                    "action": "stopping"
                 },
-                "inference_time": 0.7773
+                "inference_time": 1.443
             }
         ],
         "trial_2": [
             {
                 "velocity": 25,
                 "response": {
-                    "summary": "The runner is in the initial phase of a sprint, having just left the starting blocks with a velocity of 25 m/s.",
-                    "action": "The runner is accelerating rapidly from the starting blocks, extending their legs and arms to propel themselves forward."
+                    "summary": "The runner is sprinting, maintaining a constant speed of 25 m/s.",
+                    "action": "sprinting"
                 },
-                "inference_time": 0.9639
+                "inference_time": 1.4488
             },
             {
                 "velocity": 10,
                 "response": {
-                    "summary": "The runner is in the midst of the sprint, with a reduced velocity of 10 m/s.",
-                    "action": "The runner is continuing to accelerate, though at a slower pace than the initial burst."
+                    "summary": "The runner is decelerating, reducing their speed from 25 m/s to 10 m/s.",
+                    "action": "decelerating"
                 },
-                "inference_time": 0.839
+                "inference_time": 1.436
             },
             {
                 "velocity": 0,
                 "response": {
-                    "summary": "The runner has come to a complete stop.",
-                    "action": "The runner has decelerated to a halt, likely due to fatigue or reaching the end of their initial acceleration phase."
+                    "summary": "The runner has come to a complete stop, having decelerated from 25 m/s to 0 m/s.",
+                    "action": "stopping"
                 },
-                "inference_time": 0.7715
+                "inference_time": 1.4546
             }
         ],
         "trial_3": [
             {
                 "velocity": 25,
                 "response": {
-                    "summary": "The runner is in the initial phase of a sprint, having just left the starting blocks with a velocity of 25 m/s.",
-                    "action": "The runner is accelerating rapidly from the starting blocks, extending their legs and arms to propel themselves forward."
-                },
-                "inference_time": 0.994
-            },
-            {
-                "velocity": 10,
-                "response": {
-                    "summary": "The runner is in the midst of the sprint, with a reduced velocity of 10 m/s.",
-                    "action": "The runner is continuing to accelerate, though at a slower pace than the initial burst."
-                },
-                "inference_time": 0.8648
-            },
-            {
-                "velocity": 0,
-                "response": {
-                    "summary": "The runner has come to a complete stop.",
-                    "action": "The runner has decelerated to a halt, likely due to fatigue or reaching the end of their initial acceleration phase."
-                },
-                "inference_time": 0.7721
-            }
-        ]
-    },
-    "gemma3:12b": {
-        "trial_1": [
-            {
-                "velocity": 25,
-                "response": {
-                    "summary": "The runner is sprinting forward, having just left the starting blocks. He is in mid-stride, with his body angled forward and arms in motion, indicating a high velocity.",
+                    "summary": "The runner is sprinting, maintaining a constant speed of 25 m/s.",
                     "action": "sprinting"
                 },
-                "inference_time": 1.2054
+                "inference_time": 1.4532
             },
             {
                 "velocity": 10,
                 "response": {
-                    "summary": "The runner is continuing to sprint, but his velocity has decreased compared to the previous time instant. He is still in motion, but his stride appears less powerful.",
-                    "action": "sprinting, decelerating"
+                    "summary": "The runner is decelerating, reducing their speed from 25 m/s to 10 m/s.",
+                    "action": "decelerating"
                 },
-                "inference_time": 1.1222
+                "inference_time": 1.4648
             },
             {
                 "velocity": 0,
                 "response": {
-                    "summary": "The runner has come to a complete stop. His body is likely in a braced position, indicating an abrupt halt in motion.",
-                    "action": "stopped"
+                    "summary": "The runner has come to a complete stop, having reduced their speed from 25 m/s to 0 m/s.",
+                    "action": "stopping"
                 },
-                "inference_time": 1.05
-            }
-        ],
-        "trial_2": [
-            {
-                "velocity": 25,
-                "response": {
-                    "summary": "The runner is sprinting forward, having just left the starting blocks. He is in mid-stride, with his body angled forward and arms in motion, indicating a high velocity.",
-                    "action": "sprinting"
-                },
-                "inference_time": 1.1811
-            },
-            {
-                "velocity": 10,
-                "response": {
-                    "summary": "The runner is continuing to sprint, but his velocity has decreased compared to the previous time instant. He is still in motion, but his stride appears less powerful.",
-                    "action": "sprinting, decelerating"
-                },
-                "inference_time": 1.0678
-            },
-            {
-                "velocity": 0,
-                "response": {
-                    "summary": "The runner has come to a complete stop. His body is likely in a braced position, indicating an abrupt halt in motion.",
-                    "action": "stopped"
-                },
-                "inference_time": 0.9483
-            }
-        ],
-        "trial_3": [
-            {
-                "velocity": 25,
-                "response": {
-                    "summary": "The runner is sprinting forward, having just left the starting blocks. He is in mid-stride, with his body angled forward and arms in motion, indicating a high velocity.",
-                    "action": "sprinting"
-                },
-                "inference_time": 1.1774
-            },
-            {
-                "velocity": 10,
-                "response": {
-                    "summary": "The runner is continuing to sprint, but his velocity has decreased compared to the previous time instant. He is still in motion, but his stride appears less powerful.",
-                    "action": "sprinting, decelerating"
-                },
-                "inference_time": 1.0809
-            },
-            {
-                "velocity": 0,
-                "response": {
-                    "summary": "The runner has come to a complete stop. His body is likely in a braced position, indicating an abrupt halt in motion.",
-                    "action": "stopped"
-                },
-                "inference_time": 1.0055
+                "inference_time": 1.4981
             }
         ]
     },
@@ -556,6 +476,166 @@
                     "action": "The athlete's action is dynamic, capturing the essence of speed and agility in competitive running. He appears fully engaged in his performance, with a focused expression and body language that conveys determination and effort."
                 },
                 "inference_time": 1.8657
+            }
+        ]
+    },
+    "gemma3:4b": {
+        "trial_1": [
+            {
+                "velocity": 25,
+                "response": {
+                    "summary": "The runner is in the initial phase of a sprint, having just left the starting blocks with a velocity of 25 m/s.",
+                    "action": "The runner is accelerating rapidly from the starting blocks, extending their legs and arms to propel themselves forward."
+                },
+                "inference_time": 1.2991
+            },
+            {
+                "velocity": 10,
+                "response": {
+                    "summary": "The runner is in the midst of the sprint, with a reduced velocity of 10 m/s.",
+                    "action": "The runner is continuing to accelerate, though at a slower pace than the initial burst."
+                },
+                "inference_time": 0.8438
+            },
+            {
+                "velocity": 0,
+                "response": {
+                    "summary": "The runner has come to a complete stop.",
+                    "action": "The runner has decelerated to a halt, likely due to fatigue or reaching the end of their initial acceleration phase."
+                },
+                "inference_time": 0.7773
+            }
+        ],
+        "trial_2": [
+            {
+                "velocity": 25,
+                "response": {
+                    "summary": "The runner is in the initial phase of a sprint, having just left the starting blocks with a velocity of 25 m/s.",
+                    "action": "The runner is accelerating rapidly from the starting blocks, extending their legs and arms to propel themselves forward."
+                },
+                "inference_time": 0.9639
+            },
+            {
+                "velocity": 10,
+                "response": {
+                    "summary": "The runner is in the midst of the sprint, with a reduced velocity of 10 m/s.",
+                    "action": "The runner is continuing to accelerate, though at a slower pace than the initial burst."
+                },
+                "inference_time": 0.839
+            },
+            {
+                "velocity": 0,
+                "response": {
+                    "summary": "The runner has come to a complete stop.",
+                    "action": "The runner has decelerated to a halt, likely due to fatigue or reaching the end of their initial acceleration phase."
+                },
+                "inference_time": 0.7715
+            }
+        ],
+        "trial_3": [
+            {
+                "velocity": 25,
+                "response": {
+                    "summary": "The runner is in the initial phase of a sprint, having just left the starting blocks with a velocity of 25 m/s.",
+                    "action": "The runner is accelerating rapidly from the starting blocks, extending their legs and arms to propel themselves forward."
+                },
+                "inference_time": 0.994
+            },
+            {
+                "velocity": 10,
+                "response": {
+                    "summary": "The runner is in the midst of the sprint, with a reduced velocity of 10 m/s.",
+                    "action": "The runner is continuing to accelerate, though at a slower pace than the initial burst."
+                },
+                "inference_time": 0.8648
+            },
+            {
+                "velocity": 0,
+                "response": {
+                    "summary": "The runner has come to a complete stop.",
+                    "action": "The runner has decelerated to a halt, likely due to fatigue or reaching the end of their initial acceleration phase."
+                },
+                "inference_time": 0.7721
+            }
+        ]
+    },
+    "gemma3:12b": {
+        "trial_1": [
+            {
+                "velocity": 25,
+                "response": {
+                    "summary": "The runner is sprinting forward, having just left the starting blocks. He is in mid-stride, with his body angled forward and arms in motion, indicating a high velocity.",
+                    "action": "sprinting"
+                },
+                "inference_time": 1.2054
+            },
+            {
+                "velocity": 10,
+                "response": {
+                    "summary": "The runner is continuing to sprint, but his velocity has decreased compared to the previous time instant. He is still in motion, but his stride appears less powerful.",
+                    "action": "sprinting, decelerating"
+                },
+                "inference_time": 1.1222
+            },
+            {
+                "velocity": 0,
+                "response": {
+                    "summary": "The runner has come to a complete stop. His body is likely in a braced position, indicating an abrupt halt in motion.",
+                    "action": "stopped"
+                },
+                "inference_time": 1.05
+            }
+        ],
+        "trial_2": [
+            {
+                "velocity": 25,
+                "response": {
+                    "summary": "The runner is sprinting forward, having just left the starting blocks. He is in mid-stride, with his body angled forward and arms in motion, indicating a high velocity.",
+                    "action": "sprinting"
+                },
+                "inference_time": 1.1811
+            },
+            {
+                "velocity": 10,
+                "response": {
+                    "summary": "The runner is continuing to sprint, but his velocity has decreased compared to the previous time instant. He is still in motion, but his stride appears less powerful.",
+                    "action": "sprinting, decelerating"
+                },
+                "inference_time": 1.0678
+            },
+            {
+                "velocity": 0,
+                "response": {
+                    "summary": "The runner has come to a complete stop. His body is likely in a braced position, indicating an abrupt halt in motion.",
+                    "action": "stopped"
+                },
+                "inference_time": 0.9483
+            }
+        ],
+        "trial_3": [
+            {
+                "velocity": 25,
+                "response": {
+                    "summary": "The runner is sprinting forward, having just left the starting blocks. He is in mid-stride, with his body angled forward and arms in motion, indicating a high velocity.",
+                    "action": "sprinting"
+                },
+                "inference_time": 1.1774
+            },
+            {
+                "velocity": 10,
+                "response": {
+                    "summary": "The runner is continuing to sprint, but his velocity has decreased compared to the previous time instant. He is still in motion, but his stride appears less powerful.",
+                    "action": "sprinting, decelerating"
+                },
+                "inference_time": 1.0809
+            },
+            {
+                "velocity": 0,
+                "response": {
+                    "summary": "The runner has come to a complete stop. His body is likely in a braced position, indicating an abrupt halt in motion.",
+                    "action": "stopped"
+                },
+                "inference_time": 1.0055
             }
         ]
     }

@@ -26,7 +26,7 @@ responses_full_path = os.path.join(script_dir, responses_rel_path)
 
 if __name__ == "__main__":
 
-    model_to_test = "llava:13b" 
+    model_to_test = "llama3.2-vision:latest" 
     n_trials = 3
     with open(responses_full_path) as f:
         responses = json.load(f)

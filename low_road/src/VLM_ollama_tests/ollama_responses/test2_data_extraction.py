@@ -71,11 +71,7 @@ ground_truth = {
 }
 
 def extract_architecture_name(full_name):
-    # 1. Dividi la stringa al primo trattino ('-')
     architecture_name = full_name.split('-')[0]
-    
-    # 2. Se non c'era un trattino, la stringa intera viene restituita.
-    #    Ora, dividi il risultato al primo due punti (':')
     architecture_name = architecture_name.split(':')[0]
     
     return architecture_name
@@ -102,7 +98,6 @@ for model in models_list:
 
 
     # NUMBER OF PARAMETERS EXTRACTION
- 
     if model == "llama3.2-vision:latest":
             params_numb = 11.0
             parameters_list.append(params_numb)

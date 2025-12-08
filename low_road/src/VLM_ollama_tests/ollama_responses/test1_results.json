@@ -1,0 +1,52 @@
+{
+    "Model_Name": [
+        "qwen3-vl:2b-instruct",
+        "qwen3-vl:4b-instruct",
+        "qwen3-vl:8b-instruct",
+        "llama3.2-vision:latest",
+        "llava:7b",
+        "llava:13b",
+        "gemma3:4b",
+        "gemma3:12b"
+    ],
+    "VLM_Accuracy": [
+        NaN,
+        NaN,
+        NaN,
+        NaN,
+        NaN,
+        NaN,
+        NaN,
+        NaN
+    ],
+    "Inference_Time_s": [
+        0.5265,
+        0.4691,
+        0.7628,
+        1.472,
+        1.2082,
+        2.0454,
+        0.877,
+        1.0879
+    ],
+    "Parameters_B": [
+        2.0,
+        4.0,
+        8.0,
+        11.0,
+        7.0,
+        13.0,
+        4.0,
+        12.0
+    ],
+    "Architecture": [
+        "qwen3",
+        "qwen3",
+        "qwen3",
+        "llama3.2",
+        "llava",
+        "llava",
+        "gemma3",
+        "gemma3"
+    ]
+}
