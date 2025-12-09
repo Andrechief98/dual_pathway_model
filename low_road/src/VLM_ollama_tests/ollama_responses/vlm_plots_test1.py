@@ -8,45 +8,12 @@ import matplotlib.patches as mpatches
 
 # --- IL TUO CODICE DI ESTRAZIONE DATI INIZIALE RIMANE INVARIATO ---
 script_dir = os.path.dirname(os.path.abspath(__file__))
-json_file_name = "test1.json"
+json_file_name = "test1_results.json"
 full_json_path = os.path.join(script_dir, json_file_name)
 
 # Il tuo codice originale per caricare i dati:
 with open(full_json_path, "r") as f:
-    responses = json.load(f)
-
-models_list = list(responses.keys())
-inference_times_list = []
-parameters_list = []
-for model in models_list:
-    sum_inference_time = 0
-    for trial in list(responses[model].keys()):
-        sum_inference_time += responses[model][trial]["inference_time"]
-    inference_times_list.append(round(sum_inference_time/len(list(responses[model].keys())),4))
-    params_numb = re.search(r'(\d+\.?\d*)b', model)
-    if params_numb:
-        parameters_list.append(float(params_numb.group(1)))
-    else:
-        parameters_list.append(np.nan) # Gestione errore se il nome non combacia col regex
-
-
-data = {
-    'Model_Name': models_list,
-    'VLM_Accuracy': [10.5, 40.2, 55.0, 78.5, 60, 80][:len(models_list)], # Tronca se i dati JSON sono meno di 6
-    'Inference_Time_s': inference_times_list,
-    'Parameters_B': parameters_list,
-    'Architecture': ['Qwen', 'Qwen', 'Qwen', 'Gemma', 'Gemma', 'llama'][:len(models_list)]
-}
-
-print(models_list)
-print(len(models_list))
-
-print(inference_times_list)
-print(len(inference_times_list))
-
-print(parameters_list)
-print(len(parameters_list))
-
+    data = json.load(f)
 
 df = pd.DataFrame(data)
 
@@ -77,13 +44,52 @@ scatter = plt.scatter(
 # --- 4. ETICHETTE E ANNOTAZIONI (MODIFICATE) ---
 
 # Aggiusta il posizionamento del testo sopra la bolla
-y_offset_text = 2 # Offset verticale per posizionare il nome sopra la bolla
 
 for i in range(len(df)):
+    if df["Model_Name"][i] == "qwen3-vl:2b-instruct":
+        model_name = "qwen3-vl:2b"
+        x_offset_text = 0.075
+        y_offset_text = 3 
+
+    elif df["Model_Name"][i] == "qwen3-vl:4b-instruct":
+        model_name = "qwen3-vl:4b"
+        x_offset_text = 0
+        y_offset_text = 5
+
+    elif df["Model_Name"][i] == "qwen3-vl:8b-instruct":
+        model_name = "qwen3-vl:8b"
+        x_offset_text = 0
+        y_offset_text = 6
+
+    elif df["Model_Name"][i] == "llama3.2-vision:latest":
+        model_name = "llama3.2:11b"
+        x_offset_text = 0
+        y_offset_text = 2.5 
+
+    elif df["Model_Name"][i] == "llava:7b":
+        model_name  = "llava:7b"
+        x_offset_text = 0
+        y_offset_text = 2.5 
+
+    elif df["Model_Name"][i] == "llava:13b":
+        model_name  = "llava:13b"
+        x_offset_text = 0
+        y_offset_text = 2.5 
+
+    elif df["Model_Name"][i] == "gemma3:4b":
+        model_name  = "gemma3:4b"
+        x_offset_text = 0.05
+        y_offset_text = 5
+
+    elif df["Model_Name"][i] == "gemma3:12b":
+        model_name  = "gemma3:12b"
+        x_offset_text = 0
+        y_offset_text = 2.5 
+
     plt.annotate(
-        df['Model_Name'][i],
+        model_name,
         # Posiziona il testo esattamente sopra il centro X della bolla, con un piccolo offset Y
-        (df['Inference_Time_s'][i], df['VLM_Accuracy'][i] + y_offset_text),
+        (df['Inference_Time_s'][i] + x_offset_text, df['VLM_Accuracy'][i] + y_offset_text),
         fontsize=9,
         alpha=0.9,
         ha='center',  # Allinea orizzontalmente al centro
@@ -116,7 +122,7 @@ for i, category in enumerate(unique_categories):
     legend_patches.append(mpatches.Patch(color=color, label=category, alpha=0.6))
 
 # Aggiungi la legenda delle famiglie di architetture, posizionata in alto a destra
-plt.legend(handles=legend_patches, title="Architecture", loc="lower right", frameon=True)
+plt.legend(handles=legend_patches, title="Architecture", loc="upper right", frameon=True)
 
 
 
@@ -124,7 +130,7 @@ plt.legend(handles=legend_patches, title="Architecture", loc="lower right", fram
 plt.title('VLMs performance (Accuracy vs. Inference)', fontsize=16)
 plt.xlabel('Inference time (s)', fontsize=12)
 plt.ylabel('VLM Accuracy (%)', fontsize=12)
-plt.ylim(0, 100)
+plt.ylim(-10, 125)
 plt.grid(True, linestyle='--', alpha=0.6)
 
 plt.show()

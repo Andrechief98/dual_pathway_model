@@ -61,18 +61,20 @@ for model in models_list:
         else:
             parameters_list.append(np.nan) # Gestione errore se il nome non combacia col regex
 
-     # COMPUTE ACCURACY
-    q1_accuracy_list = []
-    q2_accuracy_list = []
-    q3_accuracy_list = []
-    q4_accuracy_list = []
+    # COMPUTE ACCURACY (FROM GEMINI - LLM as judge)
+    accuracy_list = [0.0, 0.0, 50, 100, 0.0, 0.0, 50, 100]
+    # q1_accuracy_list = []
+    # q2_accuracy_list = []
+    # q3_accuracy_list = []
+    # q4_accuracy_list = []
 
     # for trial in list(responses[model].keys()):
     #     continue
 
-    sum_final_accuracy = np.array(q1_accuracy_list).mean() + np.array(q2_accuracy_list).mean() + np.array(q3_accuracy_list).mean() + np.array(q4_accuracy_list).mean()
-    final_accuracy = sum_final_accuracy/4
-    accuracy_list.append(final_accuracy*100)
+    # sum_final_accuracy = np.array(q1_accuracy_list).mean() + np.array(q2_accuracy_list).mean() + np.array(q3_accuracy_list).mean() + np.array(q4_accuracy_list).mean()
+    # final_accuracy = sum_final_accuracy/4
+    # accuracy_list.append(final_accuracy*100)
+
 
 
     # EXTRACTION ARCHITECTURE

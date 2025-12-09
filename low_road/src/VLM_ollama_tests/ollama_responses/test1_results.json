@@ -10,14 +10,14 @@
         "gemma3:12b"
     ],
     "VLM_Accuracy": [
-        NaN,
-        NaN,
-        NaN,
-        NaN,
-        NaN,
-        NaN,
-        NaN,
-        NaN
+        0.0,
+        0.0,
+        50,
+        100,
+        0.0,
+        0.0,
+        50,
+        100
     ],
     "Inference_Time_s": [
         0.5265,
