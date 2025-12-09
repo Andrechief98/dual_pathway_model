@@ -8,6 +8,18 @@ import cv2
 from dual_pathway_interfaces.srv import highRoadInfo, highRoadInfoRequest
 from ollama import chat
 import time
+from typing import List
+from pydantic import BaseModel
+
+class Object(BaseModel):
+    name: str
+    hazardous_properties: str
+    dangerousness: float
+
+
+class vlmResponse(BaseModel):
+    summary: str
+    objects: List[Object]
 
 class VLMnode:
     def __init__(self):
@@ -58,18 +70,20 @@ class VLMnode:
 
 
     def vlm_inference(self, pil_image, relevant_info):
-        ###### TO DO: VLM LOGIC
         
+        # TO ADD: cosine similarity between consecutive images
+
         # print(relevant_info)
 
         prompt = f"""
-        Describe what the subject of the image is doing considering provided information. Be concise and coherent with information provided.
+        You are a robot in an indoor environment. Your goal is to understand what you see in the image and provide a value of dangerousness for each object in the environment.
+        Such value will be used to modify your navigation behavior. Not consider walls as objects.
 
-        {relevant_info}
+        Return a response considering indicated JSON format.
         """
 
         vlm_inference_response = chat(
-            'qwen2.5vl:3b',
+            'qwen3-vl:8b',
             messages=[
                 {
                     'role': 'user', 
@@ -77,6 +91,8 @@ class VLMnode:
                     'image': [pil_image]
                     }
                 ],
+            format=vlmResponse.model_json_schema(),
+            options={'temperature': 0},
         )
         
         self.image_description_pub.publish(vlm_inference_response.message.content)
