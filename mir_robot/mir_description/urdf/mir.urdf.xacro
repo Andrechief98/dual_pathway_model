@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro"
+       name="mir" >
+
+  <!-- MiR base -->
+  <xacro:include filename="$(find mir_description)/urdf/include/mir_v1.urdf.xacro" />
+  <xacro:include filename="$(find mir_description)/urdf/include/common.gazebo.xacro" />
+  <xacro:include filename="$(find mir_description)/urdf/include/_d435.urdf.xacro" />
+
+  <xacro:sensor_d435 parent="base_link" name="camera">
+    <origin xyz="0 0 0.60" rpy="0 0 0"/>
+  </xacro:sensor_d435>
+  
+
+  <xacro:arg name="tf_prefix" default="" />
+  <xacro:property name="tf_prefix_" value="$(arg tf_prefix)" />
+  <xacro:if value="${tf_prefix_ == ''}">
+    <xacro:property name="prefix" value="" />
+  </xacro:if>
+  <xacro:unless value="${tf_prefix_ == ''}">
+    <xacro:property name="prefix" value="${tf_prefix_}/" />
+  </xacro:unless>
+
+  <xacro:mir prefix="${prefix}" />
+  <xacro:controller_plugin_gazebo robot_namespace=""/>
+
+  <!-- instead of the controller_plugin_gazebo, you can use the diffdrive controller like this:
+    <xacro:diff_controller_plugin_gazebo prefix=""
+      left_wheel_joint="left_wheel_joint"
+      right_wheel_joint="right_wheel_joint"
+      wheel_separation="${2*mir_act_wheel_dy}"
+      wheel_radius="${mir_act_wheel_radius}"/>
+  -->
+
+  <!-- plugin specifico librealsense (dopo la chiamata al macro) -->
+  <gazebo reference="camera_link">
+    <plugin name="realsense_camera_plugin" filename="librealsense_gazebo_plugin.so">
+      <prefix>camera</prefix>
+      <depthUpdateRate>30.0</depthUpdateRate>
+      <colorUpdateRate>30.0</colorUpdateRate>
+      <infraredUpdateRate>30.0</infraredUpdateRate>
+      <depthTopicName>aligned_depth_to_color/image_raw</depthTopicName>
+      <colorTopicName>color/image_raw</colorTopicName>
+      <pointCloud>true</pointCloud>
+      <pointCloudTopicName>depth/color/points</pointCloudTopicName>
+      <rangeMinDepth>0.3</rangeMinDepth>
+      <rangeMaxDepth>3.0</rangeMaxDepth>
+    </plugin>
+  </gazebo>
+
+</robot>
