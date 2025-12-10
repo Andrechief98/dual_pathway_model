@@ -3,10 +3,15 @@ import rospy
 import yaml
 import math
 import numpy as np
+import os
 from mpc_planner.msg import mpcParameters
 from std_msgs.msg import String
 from tkinter import Tk, Scale, VERTICAL, Label, Button
 import threading
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+mpc_params_file_path = "../../mpc_planner/config/mpc_params.yaml"
+full_path = os.path.join(script_dir, mpc_params_file_path)
 
 class Node:
     def __init__(self, yaml_path):
@@ -115,8 +120,7 @@ class Node:
 
 if __name__ == '__main__':
     try:
-        yaml_path = "/home/andrea/ros_packages_aggiuntivi/src/dual_pathway_model/mpc_planner/config/mpc_params.yaml"
-        mpc_parameters_node = Node(yaml_path)
+        mpc_parameters_node = Node(full_path)
 
         while not rospy.is_shutdown():
             mpc_parameters_node.run()

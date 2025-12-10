@@ -1,7 +1,7 @@
 global_costmap:
     global_frame: map
     update_frequency: 1.0
-    publish_frequency: 0.5
+    publish_frequency: 1.0
     raytrace_range: 2.0
     resolution: 0.05
     z_resolution: 0.2

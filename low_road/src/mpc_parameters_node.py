@@ -4,6 +4,11 @@ import yaml
 from mpc_planner.msg import mpcParameters
 from tkinter import Tk, Scale, VERTICAL, Label, Button
 import threading
+import os
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+mpc_params_file_path = "../../mpc_planner/config/mpc_params.yaml"
+full_path = os.path.join(script_dir, mpc_params_file_path)
 
 class MPCParamPublisher:
     def __init__(self, yaml_path):
@@ -134,4 +139,4 @@ class MPCParamPublisher:
             self.rate.sleep()
 
 if __name__ == '__main__':
-    MPCParamPublisher('/home/andrea/ros_packages_aggiuntivi/src/dual_pathway_model/mpc_planner/config/mpc_params.yaml')
+    MPCParamPublisher(full_path)

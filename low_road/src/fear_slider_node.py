@@ -7,6 +7,10 @@ from mpc_planner.msg import mpcParameters
 from tkinter import Tk, Scale, VERTICAL, Label, Button
 import threading
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+mpc_params_file_path = "../../mpc_planner/config/mpc_params.yaml"
+full_path = os.path.join(script_dir, mpc_params_file_path)
+
 class FearTrigger:
     def __init__(self, yaml_path):
         # --- Caricamento parametri iniziali ---
@@ -141,7 +145,6 @@ class FearTrigger:
 
 if __name__ == '__main__':
     try:
-        yaml_path = "/home/andrea/ros_packages_aggiuntivi/src/dual_pathway_model/mpc_planner/config/mpc_params.yaml"
-        FearTrigger(yaml_path)
+        FearTrigger(full_path)
     except rospy.ROSInterruptException:
         pass
