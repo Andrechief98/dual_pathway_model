@@ -100,36 +100,34 @@ class AmygdalaNode:
     def update_high_road_risk(self, msg):
         image_description = msg.data
 
-        # TO DO: add the conversation management
-        response: ChatResponse = chat(
-            model='gemma3:270m', 
-            messages=[
-            {
-                'role': 'user',
-                'content': image_description,
-            },
-            ]
-        )
+        image_description_dict = json.loads(msg.data)
+        summary = image_description_dict["summary"]
+        objects_list = image_description_dict["objects"]
 
-        # Response of the Small Language Model
-        message_content = response.message.content
+        # TO DO: add the conversation management
+        # response: ChatResponse = chat(
+        #     model='gemma3:270m', 
+        #     messages=[
+        #     {
+        #         'role': 'user',
+        #         'content': image_description,
+        #     },
+        #     ]
+        # )
+
+        # # Response of the Small Language Model
+        # message_content = response.message.content
         # print(message_content)
 
         # Example of small Language Model output:
-        if self.flag :
-            message_content_ex = {
-                "risk": 1
-            }
 
-            self.flag  = False
-        else:
-            message_content_ex = {
-                "risk": 0
-            }
 
-            self.flag  = True
-        
-        self.u_high_road = message_content_ex["risk"]
+        max_fear = 0
+        for object in objects_list:
+            if object["dangerousness"] > max_fear:
+                max_fear = object["dangerousness"]
+
+        self.u_high_road = max_fear
         return
     
 
