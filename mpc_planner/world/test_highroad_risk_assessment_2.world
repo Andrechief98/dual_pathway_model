@@ -20,67 +20,23 @@
       </spot>
     </light>
 
-    <model name="visual_cylinder_no_collision">
-      <static>true</static>
-      <pose> 5 0 0 0 0 0 </pose>
-      
-      <!-- Link principale -->
-      <link name="cylinder_link">
-        
-        <!-- Visual: il cilindro sarà visibile -->
-        <visual name="cylinder_visual">
-          <geometry>
-            <cylinder>
-              <radius>0.3</radius>
-              <length>1.0</length> <!-- altezza del cilindro -->
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>0 0 1 1</ambient>   <!-- blu -->
-            <diffuse>0 0 1 1</diffuse>
-          </material>
-        </visual>
+    <include>
+      <uri>model://bookshelf</uri>
+      <name>bookshelf_hazard</name>
+      <pose>3.0 -1.2 0 0 0 0</pose> 
+    </include>
 
-        <!-- Collision: non presente, il cilindro non interferirà col LIDAR -->
-        <!-- Se vuoi comunque definire una collision per altre simulazioni, aggiungi qui -->
-        
-      </link>
-    </model>
+    <include>
+      <uri>model://mars_rover</uri>
+      <name>hazard_rover</name>
+      <pose>4.0 0.8 0.1 0 0 1.57</pose> 
+    </include>
 
-    <!-- Pedestrian 1 -->
-    <actor name="actor1">
-      <pose>5 0 0.5 0 0 -1.57</pose>
-      <skin>
-          <filename>walk.dae</filename>
-          <scale>1.0</scale>
-      </skin>
-      <animation name="walking">
-          <filename>walk.dae</filename>
-          <scale>1.000000</scale>
-          <interpolate_x>true</interpolate_x>
-      </animation>
-      <plugin name="actor1_plugin" filename="libPedestrianSFMPlugin.so">
-          <velocity>0.0</velocity>
-          <radius>1</radius>
-          <animation_factor>5.1</animation_factor>
-          <people_distance>6.0</people_distance>
-          <goal_weight>2.0</goal_weight>
-          <obstacle_weight>00.0</obstacle_weight>
-          <social_weight>0</social_weight>
-          <group_gaze_weight>0.0</group_gaze_weight>
-          <group_coh_weight>0.0</group_coh_weight>
-          <group_rep_weight>0.0</group_rep_weight>
-          <ignore_obstacles>
-            <model>ground_plane</model>
-          </ignore_obstacles>
-          <trajectory>
-            <cyclic>true</cyclic>
-            <waypoint>2.5 0 0.5</waypoint>
-            <waypoint>2.5 0 0.5</waypoint>
-          </trajectory>
-      </plugin>
-    </actor>
-
+    <include>
+      <uri>model://pine_tree</uri>
+      <name>indoor_pinetree</name>
+      <pose>7.0 -0.9 0 0 0 0</pose>
+    </include>
 
     <model name='ground_plane'>
       <static>1</static>
@@ -395,7 +351,31 @@
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-
+      
+      <model name='bookshelf_hazard'>
+        <pose>3.0 -1.2 0 0 0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>3.0 -1.2 0 0 0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='hazard_rover'>
+        <pose>4.0 0.8 0.1 0 0 1.57</pose>
+        <scale>1 1 1</scale>
+        </model>
+      <model name='indoor_pinetree'>
+        <pose>7.0 -0.9 0 0 0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>7.0 -0.9 0 0 0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
       <model name='walls'>
         <pose>4.06158 0.077644 0 0 -0 0</pose>
         <scale>1 1 1</scale>
