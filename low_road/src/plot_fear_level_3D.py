@@ -21,6 +21,7 @@ class Realtime3DPlotter:
         rospy.init_node("realtime_3d_plotter", anonymous=True)
         rospy.Subscriber("/fearlevel", String, self.callback_fear_dummy)
         rospy.Subscriber("/thalamus/info", String, self.callback_thalamus)
+        self.fear_level = 0
 
         # Setup plot
         plt.ion()
@@ -70,7 +71,7 @@ class Realtime3DPlotter:
         self.fig.canvas.mpl_connect('close_event', self.handle_close)
 
     def callback_fear_dummy(self, msg):
-        pass
+        self.fear_level = msg.data
 
     def callback_thalamus(self, msg):
         try:
@@ -95,7 +96,8 @@ class Realtime3DPlotter:
         # Ultimo punto
         x = self.dist_buffer[-1]
         y = self.rad_buffer[-1]
-        z = self.fear_function(x, y)
+        # z = self.fear_function(x, y)
+        z = float(self.fear_level)
 
         # Aggiorna scia
         self.all_x.append(x)

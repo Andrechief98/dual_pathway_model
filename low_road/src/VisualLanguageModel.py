@@ -16,7 +16,10 @@ import json
 
 class Object(BaseModel):
     name: str
-    hazardous_properties: str
+    attributes: str
+    relative_distance: float
+    relative_angle: float
+    action: str
     dangerousness: float
 
 
@@ -109,18 +112,22 @@ class VLMnode:
         # TO ADD: cosine similarity between consecutive images
 
         prompt = f"""
-        You are a robot in an indoor environment equipped with a camera. 
         I will provide you an image with some spatial and physical information associated to each object in the environment. The image represents what you see.
-        Spatial information includes:
+        Spatial and physical information includes:
          - relative distance (in meters) from you
-         - relative orientation (in radians)
+         - relative orientation (in radians) from you (right-hand convention for positive rotation):
+            - positive value means on your left
+            - negative value means on you right
          - radial velocity (in m/s) which tells you if the object is moving towards you
-        Your goal is to understand and match visual information with both physical and spatial information. Based on such understanding, you must provide a value of dangerousness for each object in the environment.
-        Such value will be used to modify your navigation behavior.
+        Your goal is to understand and match visual information with both physical and spatial information. Based on such understanding, you must understand which is the most dangerous object in the environment using a float value between 0 and 1.
 
         Return a response considering indicated JSON format.
 
         """
+
+        # Changin the name from actor to person
+        relevant_info = json.loads(relevant_info)
+        # relevant_info["person"] = relevant_info.pop("actor1")
 
         relevant_info = {
             "image_spatial_physical_info" : relevant_info
@@ -158,6 +165,8 @@ class VLMnode:
             #     {'role': 'user', 'content': user_input},
             #     {'role': 'assistant', 'content': full_response_content},
             # ]
+            self.image_description_pub.publish(full_response_content)
+            return
 
 
         else:

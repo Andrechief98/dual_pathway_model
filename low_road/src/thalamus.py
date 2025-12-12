@@ -220,7 +220,8 @@ class ThalamusNode:
 
                 dist_norm = round(np.linalg.norm(relative_dist),3)
 
-                relative_orient = round(obj_orient - robot_orient,3)
+                # relative_orient = round(obj_orient - robot_orient,3)
+                relative_orient = round(angle_diff,3)
 
                 relative_lin_vel = np.array([
                     obj_lin_vel[0] - robot_lin_vel[0],

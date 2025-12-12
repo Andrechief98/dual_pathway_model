@@ -25,7 +25,8 @@ class AmygdalaNode:
         self.fear_level_pub = rospy.Publisher("/fearlevel", String, queue_size=1)
         self.max_risk_pub = rospy.Publisher("/maxrisk", String, queue_size=1)
 
-        self.flag = True
+        self.flag = False
+        self.counter = 0
 
         self.u_low_road = 0
         self.u_high_road = 0
@@ -104,38 +105,41 @@ class AmygdalaNode:
         summary = image_description_dict["summary"]
         objects_list = image_description_dict["objects"]
 
-        # TO DO: add the conversation management
-        # response: ChatResponse = chat(
-        #     model='gemma3:270m', 
-        #     messages=[
-        #     {
-        #         'role': 'user',
-        #         'content': image_description,
-        #     },
-        #     ]
-        # )
-
-        # # Response of the Small Language Model
-        # message_content = response.message.content
-        # print(message_content)
-
-        # Example of small Language Model output:
-
-
         max_fear = 0
+        self.u_high_road = 0
         for object in objects_list:
             if object["dangerousness"] > max_fear:
                 max_fear = object["dangerousness"]
 
         self.u_high_road = max_fear
+        # print(self.u_high_road)
+
         return
     
 
     def fear_dynamics(self):
         # Computation of the actual risk input as the mean of both low-road and high-road contributes
-        self.u_eff = (self.u_low_road + self.u_high_road)/2
-        # print(self.u_eff)
-        # self.u_eff = self.u_low_road
+
+        if self.flag:
+            if self.counter <20:
+                self.u_eff = (self.u_low_road + self.u_high_road)/2
+                self.counter += 1
+
+            elif self.counter >=20 and self.counter<40:
+                self.u_eff = self.u_low_road/2
+                self.counter += 1
+
+            else:
+                self.counter = 0
+        else:
+            self.u_eff = (self.u_low_road + self.u_high_road)/2
+
+        # print("AMYGDALA INPUTS:")
+        # print(f"u_low = {self.u_low_road}")
+        # print(f"u_high = {self.u_high_road}")
+        # print(f"u_eff = {self.u_eff}")
+        # print("########################")
+
 
         x1 = self.fear_level
         x2 = self.dot_fear_level
