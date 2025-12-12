@@ -1,0 +1,28 @@
+services:
+  ros1_noetic:
+    image: test_dual_pathway:latest
+    environment:
+      - DISPLAY=$DISPLAY
+      - QT_X11_NO_MITSHM=1
+      # To enable docker container to access to X server:
+      #   xhost +local:docker (valid untile the pc restart)
+      #   xhost -local:docker (to remove the container access to X server)
+      - OLLAMA_KEEP_ALIVE=24h
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all 
+              capabilities: [gpu]
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      # - ./ollama/ollama:/root/.ollama
+      - ./dual_pathway_model:/home/ros_ws/src/dual_pathway_model
+      - ./bash_files:/home/bash_files
+    network_mode: host
+    privileged: true
+    tty: true
+    stdin_open: true
+    entrypoint: ["/bin/bash", "/home/bash_files/qwen_models.sh"]
+    command: ["bash"]
