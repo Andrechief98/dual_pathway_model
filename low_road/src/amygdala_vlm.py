@@ -121,18 +121,24 @@ class AmygdalaNode:
         # Computation of the actual risk input as the mean of both low-road and high-road contributes
 
         if self.flag:
+            # Test to check if high road inputs works
             if self.counter <20:
                 self.u_eff = (self.u_low_road + self.u_high_road)/2
                 self.counter += 1
 
             elif self.counter >=20 and self.counter<40:
-                self.u_eff = self.u_low_road/2
+                self.u_eff = self.u_low_road
                 self.counter += 1
 
             else:
                 self.counter = 0
         else:
-            self.u_eff = (self.u_low_road + self.u_high_road)/2
+            # Normal working
+            if self.u_high_road != 0:
+                # If we have VLM input, we consider the mean
+                self.u_eff = (self.u_low_road + self.u_high_road)/2
+            else:
+                self.u_eff = self.u_low_road
 
         # print("AMYGDALA INPUTS:")
         # print(f"u_low = {self.u_low_road}")
