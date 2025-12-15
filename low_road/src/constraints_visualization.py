@@ -100,7 +100,11 @@ class ModelMarkerVisualizerTF2:
         marker.scale.x = self.line_thickness
         marker.color.r, marker.color.g, marker.color.b, marker.color.a = self.color_r, self.color_g, self.color_b, self.color_a
 
-        radius = 0.25
+        if "rover" in name:
+            radius = 1
+        else:
+            radius = 0.3
+            
         for i in range(self.num_points + 1):
             theta = 2 * math.pi * i / self.num_points
             p = Point(x=radius * math.cos(theta), y=radius * math.sin(theta), z=0.05)

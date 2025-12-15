@@ -123,13 +123,14 @@ namespace mpc_planner {
                                     weights_start_idx + N_cost_params + nu + N_obs_info*j + 2));
                 cs::MX obs_vel = p(cs::Slice(weights_start_idx + N_cost_params + nu + N_obs_info*j + 2,
                                             weights_start_idx + N_cost_params + nu + N_obs_info*j + 4));
+                cs::MX obs_r = p(cs::Slice(weights_start_idx + N_cost_params + nu + N_obs_info*j + 4));
 
 
                 // Posizione futura ostacolo
                 cs::MX fut_obs_pos = obs_pos + k * dt * obs_vel;
 
                 cs::MX diff = xk(cs::Slice(0,2)) - fut_obs_pos;
-                cs::MX distance = cs::MX::sqrt(cs::MX::sum1(diff*diff));
+                cs::MX distance = cs::MX::sqrt(cs::MX::sum1(diff*diff)) - obs_r;
 
                 // Penalty logaritmico
                 cs::MX obstacle_penalty = -alfa * cs::MX::log(beta * distance); //alfa/(0.05*(distance * distance))
@@ -590,7 +591,20 @@ namespace mpc_planner {
                     // filtra solo gli oggetti che ti interessano
                     if (name != "walls" && name != "ground_plane" && name != "mir")
                     {   
+                        
+                        // Default radius
                         double radius = 0.3;
+
+                        std::cout << name << std::endl;
+
+                        // Radius of the constraints set according to the considered obstacle:
+                        std::string sub_string = "rover";
+                        if (name.find(sub_string) != std::string::npos ){
+                            radius = 1.0;
+                            // std::cout << "############### RADIUS: " << radius << std::endl;
+                        }
+
+                        
 
 
                         // STARE ATTENTI AL FATTO CHE ros::Time::now() FORNISCE IL TIME DATO DAL CLOCK O DEL PC NEL CASO 
@@ -675,8 +689,10 @@ namespace mpc_planner {
                         obstacles_list[i].updateInfo(x_map, y_map, time);
 
                         // DEBUG opzionale
+                        // ROS_INFO_STREAM("Obstacle radius:" << obstacles_list[i].r <<"");
                         // ROS_INFO_STREAM("Updated obstacle[" << i << "] in map frame: ("
                         //                 << x_map << ", " << y_map << ")");
+                        
                     }
                 }
 
