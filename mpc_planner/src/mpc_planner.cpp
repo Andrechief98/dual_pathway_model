@@ -64,7 +64,7 @@ namespace mpc_planner {
 
 
         // parameters of the optimization problem: 
-        //      [x0,y0,th0, reference(3*(N+1)), Qx, Qy, Qth, Rv, Rw, Px, Py, Pth, alfa, beta, last_v, last_w, obs_info([x_obs1, y_obs1, vx_obs1, vy_obs1, r_obs1], [x_obs2, y_obs2, vx_obs2, vy_obs2, r_obs2]), ...]   
+        //      [x0,y0,th0, reference(3*(N+1)), Qx, Qy, Qth, Rv, Rw, Px, Py, Pth, alfa[obs1, obs2, ...], beta[obs1, obs2, ...], last_v, last_w, obs_info([x_obs1, y_obs1, vx_obs1, vy_obs1, r_obs1], [x_obs2, y_obs2, vx_obs2, vy_obs2, r_obs2]), ...]   
         int p_dim = nx                       // stato iniziale
           + nx * (Np + 1)                   // traiettoria di riferimento
           + N_cost_params                   // parametri di costo
@@ -86,9 +86,13 @@ namespace mpc_planner {
         cs::MX Px   =   p(weights_start_idx + 5);
         cs::MX Py   =   p(weights_start_idx + 6);
         cs::MX Pth  =   p(weights_start_idx + 7);
-        cs::MX alfa =   p(weights_start_idx + 8);
-        cs::MX beta =   p(weights_start_idx + 9);
-          
+
+        cs::MX alfa_vec =   p(cs::Slice(weights_start_idx + 8, weights_start_idx + 8 + N_obs));
+        cs::MX beta_vec =   p(cs::Slice(weights_start_idx + 8 + N_obs, weights_start_idx + 8 + 2 * N_obs));          
+        
+        // L'offset per i parametri successivi (last_u e info ostacoli)
+        int last_u_idx = weights_start_idx + 8 + (2 * N_obs);
+        int obstacle_info_start = last_u_idx + nu;
 
         // Cost function
         cs::MX J = cs::MX::zeros(1);
@@ -118,12 +122,14 @@ namespace mpc_planner {
 
             // Obstacle avoidance
             for(int j=0; j<N_obs; j++){
-                
-                cs::MX obs_pos = p(cs::Slice(weights_start_idx + N_cost_params + nu + N_obs_info*j,
-                                    weights_start_idx + N_cost_params + nu + N_obs_info*j + 2));
-                cs::MX obs_vel = p(cs::Slice(weights_start_idx + N_cost_params + nu + N_obs_info*j + 2,
-                                            weights_start_idx + N_cost_params + nu + N_obs_info*j + 4));
-                cs::MX obs_r = p(cs::Slice(weights_start_idx + N_cost_params + nu + N_obs_info*j + 4));
+
+                cs::MX alfa_j = alfa_vec(j);
+                cs::MX beta_j = beta_vec(j);
+                int obs_ptr = obstacle_info_start + N_obs_info * j;
+
+                cs::MX obs_pos = p(cs::Slice(obs_ptr, obs_ptr + 2));
+                cs::MX obs_vel = p(cs::Slice(obs_ptr + 2, obs_ptr + 4));
+                cs::MX obs_r   = p(obs_ptr + 4);
 
 
                 // Posizione futura ostacolo
@@ -133,7 +139,7 @@ namespace mpc_planner {
                 cs::MX distance = cs::MX::sqrt(cs::MX::sum1(diff*diff)) - obs_r;
 
                 // Penalty logaritmico
-                cs::MX obstacle_penalty = -alfa * cs::MX::log(beta * distance); //alfa/(0.05*(distance * distance))
+                cs::MX obstacle_penalty = -alfa_j * cs::MX::log(beta_j * distance); //alfa/(0.05*(distance * distance))
 
                 // Aggiunta costo ostacolo
                 J = J + obstacle_penalty;
@@ -261,7 +267,7 @@ namespace mpc_planner {
             for (int j = 0; j < N_obs; ++j) {
 
                 // Indice base nel vettore p per l'ostacolo j
-                int obs_base = weights_start_idx + N_cost_params + nu + j * N_obs_info;
+                int obs_base = obstacle_info_start + j * N_obs_info;
 
                 // Estrazione posizione e velocità (assumo ordine: x, y, vx, vy, r)
                 cs::MX obs_pos = p(cs::Slice(obs_base, obs_base + 2));      
@@ -415,7 +421,7 @@ namespace mpc_planner {
             
 
             sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
-            sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &MpcPlanner::obstacleCallback, this);
+            sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &MpcPlanner::obstacleGazeboCallback, this);
             sub_mpc_params = nh_.subscribe<mpcParameters>("/mpc/params",1, &MpcPlanner::paramsCallback, this);
             pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
             pub_optimal_traj = nh_.advertise<nav_msgs::Path>("/move_base/TrajectoryPlannerROS/local_plan", 1);
@@ -447,7 +453,7 @@ namespace mpc_planner {
             }
 
             for (int i = 0; i < Q_size; ++i) {
-                // Alcuni YAML parser li leggono come int -> serve cast esplicito
+
                 double value = 0.0;
                 if (q_list[i].getType() == XmlRpc::XmlRpcValue::TypeDouble)
                     value = static_cast<double>(q_list[i]);
@@ -514,35 +520,83 @@ namespace mpc_planner {
 
 
         if (nh_.getParam("/mpc_planner/alfa", alfa_list)) {
-            double value = 0.0;
-            if (alfa_list.getType() == XmlRpc::XmlRpcValue::TypeDouble)
-                value = static_cast<double>(alfa_list);
-            else if (alfa_list.getType() == XmlRpc::XmlRpcValue::TypeInt)
-                value = static_cast<int>(alfa_list);
 
-            alfa = value;
-            N_cost_params = N_cost_params + 1;
+            int yaml_size = alfa_list.size();
+    
+            // Decidiamo quanto deve essere grande il vettore alfa
+            int dimensione_finale;
+            if (N_obs > 0) {
+                dimensione_finale = N_obs;
+            } else {
+                dimensione_finale = yaml_size;
+            }
+
+            // Ridimensioniamo il vettore Eigen
+            alfa.resize(dimensione_finale);
+
+            for(int i=0; i < dimensione_finale; i++){
+                // Se abbiamo più ostacoli dei valori nello YAML, 
+                // usiamo l'ultimo valore disponibile nello YAML (broadcast)
+                int indice_yaml;
+                if (i < yaml_size) {
+                    indice_yaml = i;
+                } else {
+                    indice_yaml = yaml_size - 1;
+                }
+
+                double value = 0.0;
+                if (alfa_list[indice_yaml].getType() == XmlRpc::XmlRpcValue::TypeDouble)
+                    value = static_cast<double>(alfa_list[indice_yaml]);
+                else if (alfa_list[indice_yaml].getType() == XmlRpc::XmlRpcValue::TypeInt)
+                    value = static_cast<int>(alfa_list[indice_yaml]);
+                alfa(i) = value;
+            }
+            N_cost_params = N_cost_params + alfa.size();
             ROS_INFO("alfa loaded");
+            std::cout << alfa.size() << std::endl;
         }
         else{
             ROS_ERROR("Error loading alfa weight");
         }
 
+        
+
 
         if (nh_.getParam("/mpc_planner/beta", beta_list)) {
-            double value = 0.0;
-            if (beta_list.getType() == XmlRpc::XmlRpcValue::TypeDouble)
-                value = static_cast<double>(beta_list);
-            else if (beta_list.getType() == XmlRpc::XmlRpcValue::TypeInt)
-                value = static_cast<int>(beta_list);
+            int yaml_size = beta_list.size();
+            
+            int dimensione_finale;
+            if (N_obs > 0) {
+                dimensione_finale = N_obs;
+            } else {
+                dimensione_finale = yaml_size;
+            }
 
-            beta = value;
-            N_cost_params = N_cost_params + 1;
+            beta.resize(dimensione_finale);
+
+            for(int i = 0; i < dimensione_finale; i++) {
+                int indice_yaml;
+                if (i < yaml_size) {
+                    indice_yaml = i;
+                } else {
+                    indice_yaml = yaml_size - 1;
+                }
+
+                double value = 0.0;
+                if (beta_list[indice_yaml].getType() == XmlRpc::XmlRpcValue::TypeDouble)
+                    value = static_cast<double>(beta_list[indice_yaml]);
+                else if (beta_list[indice_yaml].getType() == XmlRpc::XmlRpcValue::TypeInt)
+                    value = static_cast<int>(beta_list[indice_yaml]);
+                beta(i) = value;
+            }
+            N_cost_params = N_cost_params + beta.size();
             ROS_INFO("beta loaded");
+            std::cout << beta.size() << std::endl;
         }
         else{
             ROS_ERROR("Error loading beta weight");
         }
+
 
         std::cout << "Number of parameters: " << N_cost_params << std::endl;
 
@@ -560,11 +614,29 @@ namespace mpc_planner {
         P[1] = msg->P[1];
         P[2] = msg->P[2];
 
-        alfa = msg->alfa;
-        beta = msg->beta;
+        // alfa = msg->alfa;
+        // beta = msg->beta;
 
-        // std::cout << "Alfa: " << alfa << std::endl;
-        // std::cout << "Beta: " << beta << std::endl;
+        // std::cout << "Q: " << Q[0] << " " << Q[1] << " " << Q[2] << std::endl;
+        // std::cout << "R: " << R[0] << " " << R[1] << " " << std::endl;
+        // std::cout << "P: " << P[0] << " " << P[1] << " " << P[2] << std::endl;
+        
+
+        for (int i=0; i < msg->objectsList.size(); i++) {
+            // std::string object_name = msg->objectsList[i].objectName;
+            alfa[i] = msg->objectsList[i].alfa;
+            beta[i] = msg->objectsList[i].beta;
+            // std::cout << "Alfa: " << alfa[i] << std::endl;
+            // std::cout << "Beta: " << beta[i] << std::endl;
+        }
+
+        int Q_size = msg->Q.size();
+        int R_size = msg->R.size();
+        int P_size = msg->P.size();
+        int alfa_size = msg->objectsList.size();
+        int beta_size = msg->objectsList.size();
+
+        int N_cost_params = Q_size + R_size + P_size + alfa_size + beta_size;
     }
 
 
@@ -576,7 +648,8 @@ namespace mpc_planner {
         current_odom_ = *msg;
     }
 
-    void MpcPlanner::obstacleCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
+    void MpcPlanner::obstacleGazeboCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
+        // std::cout << "Gazebo callback" << std::endl;
 
         try{
             if (obstacles_list.size() != msg->name.size()-3){
@@ -642,11 +715,12 @@ namespace mpc_planner {
                     }
                 }
                 N_obs = obstacles_list.size();
-                
-                // ricreo il solver con le nuove informazioni sugli ostacoli
+                std::cout << "Number of obstacles: " << N_obs << std::endl;
+                // Ricarico i parametri per aggiornarne il numero di default e ricreo il solver con le nuove informazioni sugli ostacoli
+                loadParameters(); 
                 buildSolver();
                 std::cout << "Solver built again" << std::endl;
-                std::cout << "Number of obstacles: " << N_obs << std::endl;
+                
 
 
             }
@@ -909,8 +983,13 @@ namespace mpc_planner {
                 p(weights_start_idx + 5) = P(0);
                 p(weights_start_idx + 6) = P(1);
                 p(weights_start_idx + 7) = P(2);
-                p(weights_start_idx + 8) = alfa;
-                p(weights_start_idx + 9) = beta;
+
+
+                // --- AGGIORNAMENTO: Alfa e Beta per ogni ostacolo ---
+                for (int i = 0; i < N_obs; ++i) {
+                    p(weights_start_idx + 8 + i) = alfa(i);            // Vettore alfa
+                    p(weights_start_idx + 8 + N_obs + i) = beta(i);    // Vettore beta
+                }
 
                 p(weights_start_idx + N_cost_params + 0) = v;
                 p(weights_start_idx + N_cost_params + 1) = w;
@@ -1016,6 +1095,9 @@ namespace mpc_planner {
 
                         // --- Obstacle ---
                         for (int j = 0; j < N_obs; ++j) {
+                            double alfa_j = p(weights_start_idx + 8 + j).scalar();
+                            double beta_j = p(weights_start_idx + 8 + N_obs + j).scalar();
+
                             int idx_obs = j*Np + k;
                             double obs_x = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 0).scalar();
                             double obs_y = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 1).scalar();
@@ -1029,7 +1111,7 @@ namespace mpc_planner {
                             double dy = y - fut_obs_y;
                             double distance = std::sqrt(dx*dx + dy*dy);
 
-                            obstacle_cost += -alfa * std::log(beta * distance); //alfa/(0.05*(distance * distance));
+                            obstacle_cost += -alfa_j * std::log(beta_j * distance); //alfa/(0.05*(distance * distance));
 
                             // std::cout << "Distance from obstacle: " << distance << std::endl;
 

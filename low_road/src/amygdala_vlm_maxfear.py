@@ -21,10 +21,12 @@ class AmygdalaNode:
         self.cortex_input = rospy.Subscriber("/vlm/image/description", String, self.update_high_road_risk)                                # From Cortex (high road information)
         
         # Publishers
-        self.low_road_risks_pub = rospy.Publisher("/amygdala/lowroad/risks", String, queue_size=1)
-        self.fear_level_pub = rospy.Publisher("/fearlevel", String, queue_size=1)
-        self.max_risk_pub = rospy.Publisher("/maxrisk", String, queue_size=1)
+        self.low_road_risks_pub = rospy.Publisher("/amygdala/lowroad/risks", String, queue_size=1) # for plotting
+        self.high_road_risks_pub = rospy.Publisher("/amygdala/highroad/risks", String, queue_size=1) # for plotting 
 
+        self.fear_level_pub = rospy.Publisher("/fearlevel", String, queue_size=1)
+
+        # Attributes
         self.flag = False
         self.counter = 0
 
@@ -65,7 +67,12 @@ class AmygdalaNode:
             for object in rel_thalamus_info.keys():
                 # print(object)
 
-                rel_dist = rel_thalamus_info[object]["relative_dist"]
+                if "rover" in object:
+                    obs_r = 1
+                else:
+                    obs_r = 0.3
+                
+                rel_dist = rel_thalamus_info[object]["relative_dist"]- obs_r
                 rel_orient = rel_thalamus_info[object]["relative_orient"]
                 rel_rad_vel = rel_thalamus_info[object]["radial_vel"]
 
@@ -80,16 +87,17 @@ class AmygdalaNode:
                 # Logistic
                 k2 = 0.5;         # Slope 
                 v0 = -1;          # Neutral value (0.5 in rel_lin_vel = -1)
-                # rel_vel_risk = 1 / (1 + math.exp(-k2 * (-rel_rad_vel - v0))); 
+                rel_vel_risk = 1 / (1 + math.exp(-k2 * (-rel_rad_vel - v0))); 
+
+
 
                 object_risk_levels[object] = round(rel_dist_risk,3)
 
 
-            # Verify that it works for a single object
             object_name_list = list(rel_thalamus_info.keys())
             first_name = object_name_list[0]
-            self.u_low_road = object_risk_levels[first_name] 
-            # self.u_low_road = max(list(object_risk_levels.values()))
+            # self.u_low_road = object_risk_levels[first_name] 
+            self.u_low_road = max(list(object_risk_levels.values()))
         else:
             # We don't have any object
             self.u_low_road = 0

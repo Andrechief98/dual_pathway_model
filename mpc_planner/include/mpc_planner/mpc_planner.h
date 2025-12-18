@@ -112,8 +112,8 @@ private:
     Eigen::Vector3d Q;  // state weights
     Eigen::Vector2d R;  // control weights
     Eigen::Vector3d P;  // final state weights
-    double alfa;        
-    double beta;
+    Eigen::VectorXd alfa;        
+    Eigen::VectorXd beta;
 
 
     // Planner infomation
@@ -129,7 +129,7 @@ private:
 
     // Callback functions
     void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
-    void obstacleCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
+    void obstacleGazeboCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
     void paramsCallback(const mpcParameters::ConstPtr& msg);
 
     };

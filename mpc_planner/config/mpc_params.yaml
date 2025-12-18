@@ -2,5 +2,5 @@ mpc_planner:
   Q_weights: [10.0, 10.0, 5.0]   # weight for x,y,theta
   R_weights: [1.0, 10.0]          # weight for v,omega
   P_weights: [30.0, 30.0, 5.0]   # weight for x,y,theta
-  alfa: 1.0
-  beta: 0.1
+  alfa: [1.0]
+  beta: [0.1]
