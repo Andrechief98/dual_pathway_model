@@ -110,13 +110,14 @@ namespace mpc_planner {
 
             // Differenza angolo wrapped
             cs::MX raw = x_r(2) - xk(2);
-            cs::MX diff_th = cs::MX::atan2(cs::MX::sin(raw), cs::MX::cos(raw));
+            // cs::MX diff_th = cs::MX::atan2(cs::MX::sin(raw), cs::MX::cos(raw));
+            cs::MX diff_th = 1.0 - cs::MX::cos(x_r(2) - xk(2));
 
             // Costo tracking
             J = J
                 + Qx * (x_r(0) - xk(0)) * (x_r(0) - xk(0))
                 + Qy * (x_r(1) - xk(1)) * (x_r(1) - xk(1))
-                + Qth * diff_th * diff_th
+                + Qth * diff_th //* diff_th
                 + Rv * vk * vk
                 + Rw * wk * wk;
 
@@ -155,7 +156,8 @@ namespace mpc_planner {
 
         // Differenza angolare "wrapped"
         cs::MX raw_N = x_rN(2) - xN(2);
-        cs::MX diff_th_N = cs::MX::atan2(cs::MX::sin(raw_N), cs::MX::cos(raw_N));
+        //cs::MX diff_th_N = cs::MX::atan2(cs::MX::sin(raw_N), cs::MX::cos(raw_N));
+        cs::MX diff_th_N = 1.0 - cs::MX::cos(x_rN(2) - xN(2)); 
 
         double terminal_slack_penalty = 30.0;
 
@@ -163,7 +165,7 @@ namespace mpc_planner {
         J = J
             + Px * (x_rN(0) - xN(0)) * (x_rN(0) - xN(0))
             + Py * (x_rN(1) - xN(1)) * (x_rN(1) - xN(1))
-            + Pth * diff_th_N * diff_th_N
+            + Pth * diff_th_N //* diff_th_N
             + terminal_slack_penalty * s * s;
 
         // Cost for obstacle slack variables
@@ -214,7 +216,7 @@ namespace mpc_planner {
                 cs::MX x_next = xk(0) + dt * vk * cs::MX::cos(xk(2));
                 cs::MX y_next = xk(1) + dt * vk * cs::MX::sin(xk(2));
                 cs::MX th_next = xk(2) + dt * wk;
-                th_next = cs::MX::atan2(cs::MX::sin(th_next), cs::MX::cos(th_next));
+                // th_next = cs::MX::atan2(cs::MX::sin(th_next), cs::MX::cos(th_next));
 
                 dyn = cs::MX::vertcat({
                     xk1(0) - x_next,
@@ -387,7 +389,7 @@ namespace mpc_planner {
         opts["ipopt.print_level"] = 0;
         opts["print_time"] = 0;
         opts["ipopt.tol"] = 1e-3;
-        opts["ipopt.max_iter"] = 50;
+        opts["ipopt.max_iter"] = 100;
 
         solver_ = nlpsol("solver", "ipopt", nlp, opts);
 
@@ -848,6 +850,13 @@ namespace mpc_planner {
         double x  = x_map;
         double y = y_map;
         double theta = theta_map;
+
+        double delta_theta = angles::shortest_angular_distance(old_theta, theta);
+        theta = old_theta + delta_theta;
+
+        old_theta = theta;
+
+
         cs::DM current_state = cs::DM::vertcat({x, y, theta});
 
         std::cout << "Current state used as warm start:" << std::endl;
@@ -906,6 +915,10 @@ namespace mpc_planner {
         double y = y_map;
         double theta = theta_map;
 
+        double delta_theta = angles::shortest_angular_distance(old_theta, theta);
+        theta = old_theta + delta_theta;
+
+        old_theta = theta;
 
         // Extract odometry information from the "current_odom_" message
         // double x = current_odom_.pose.pose.position.x;
@@ -970,7 +983,7 @@ namespace mpc_planner {
                 p(1) = y; 
                 p(2) = theta;
 
-                buildReferenceTrajectory(p, Np, x, y);
+                buildReferenceTrajectory(p, Np, x, y, theta);
 
 
                 int weights_start_idx = nx + nx*(Np+1);
@@ -1264,7 +1277,7 @@ namespace mpc_planner {
         return goal_reached_;
     }
 
-    void MpcPlanner::buildReferenceTrajectory(cs::DM& p_, int Np_, double cur_x, double cur_y) {
+    void MpcPlanner::buildReferenceTrajectory(cs::DM& p_, int Np_, double cur_x, double cur_y, double cur_th) {
         // Trova il punto della traiettoria più vicino al robot
         int closest_idx = 0;
         double min_dist2 = std::numeric_limits<double>::max();
@@ -1279,7 +1292,8 @@ namespace mpc_planner {
             }
         }
 
-        
+        double last_theta_ref = cur_th;
+        std::cout << "Current orientation: " << last_theta_ref << std::endl;
 
         // Copia Np punti a partire dal closest_idx
         geometry_msgs::PoseArray ref_pose_array;
@@ -1288,45 +1302,49 @@ namespace mpc_planner {
         if (reference_type == "nearest_Np_points"){
             for (int k = 0; k < Np_+1; ++k) {
                 int traj_idx = closest_idx + 10*k;
+                double x_ref, y_ref, theta_ref;
 
                 if (traj_idx < global_plan_.size() - 1) {
                     // punto normale (non ultimo)
-                    double x_ref = global_plan_[traj_idx].pose.position.x;
-                    double y_ref = global_plan_[traj_idx].pose.position.y;
+                    x_ref = global_plan_[traj_idx].pose.position.x;
+                    y_ref = global_plan_[traj_idx].pose.position.y;
 
                     double dx = global_plan_[traj_idx+1].pose.position.x - x_ref;
                     double dy = global_plan_[traj_idx+1].pose.position.y - y_ref;
-                    double theta_ref = std::atan2(dy, dx); // (-pi; pi]
-
-                    p_(nx + nx*k + 0) = x_ref;
-                    p_(nx + nx*k + 1) = y_ref;
-                    p_(nx + nx*k + 2) = theta_ref;
-
-                    geometry_msgs::Pose pose;
-                    pose.position.x = x_ref;
-                    pose.position.y = y_ref;
-                    pose.position.z = 0.0;
-
-                    tf2::Quaternion q;
-                    q.setRPY(0, 0, theta_ref);
-                    pose.orientation = tf2::toMsg(q);
-                    ref_pose_array.poses.push_back(pose);
+                    theta_ref = std::atan2(dy, dx); // (-pi; pi]
                 }
                 else {
-                    p_(nx + nx*k + 0) = goal_pos[0];
-                    p_(nx + nx*k + 1) = goal_pos[1];
-                    p_(nx + nx*k + 2) = goal_orient;
-
-                    geometry_msgs::Pose pose;
-                    pose.position.x = goal_pos[0];
-                    pose.position.y = goal_pos[1];
-                    pose.position.z = 0.0;
-
-                    tf2::Quaternion q;
-                    q.setRPY(0, 0, goal_orient);
-                    pose.orientation = tf2::toMsg(q);
-                    ref_pose_array.poses.push_back(pose);
+                    x_ref = goal_pos[0];
+                    y_ref = goal_pos[1];
+                    theta_ref = goal_orient;
                 }
+                
+                // THETA REF PRIMA UNWRAP:
+                std::cout << "Theta reference before angle unwrap: " << theta_ref << std::endl;
+                
+                double angle_diff = angles::shortest_angular_distance(last_theta_ref, theta_ref);
+                theta_ref = last_theta_ref + angle_diff;
+
+                // THETA REF DOPO UNWRAP:
+                std::cout << "Theta reference after angle unwrap: " << theta_ref << std::endl;
+
+                p_(nx + nx*k + 0) = x_ref;
+                p_(nx + nx*k + 1) = y_ref;
+                p_(nx + nx*k + 2) = theta_ref;
+
+                last_theta_ref = theta_ref;
+
+                // For visualization:
+                geometry_msgs::Pose pose;
+                pose.position.x = x_ref;
+                pose.position.y = y_ref;
+                pose.position.z = 0.0;
+
+                tf2::Quaternion q;
+                q.setRPY(0, 0, theta_ref);
+                pose.orientation = tf2::toMsg(q);
+                ref_pose_array.poses.push_back(pose);
+
             }
         }
         else if (reference_type == "equidistant_Np_points"){
@@ -1335,7 +1353,6 @@ namespace mpc_planner {
 
             std::cout << "Step: " << step << std::endl;
 
-            double last_theta_ref = 0.0;
 
             for (int k = 0; k < Np_; k++) {
                 int traj_idx = std::min(closest_idx + k * step, (int)global_plan_.size() - 2);
@@ -1348,11 +1365,15 @@ namespace mpc_planner {
 
                 double theta_ref = std::atan2(dy, dx);
 
+                // THETA REF PRIMA UNWRAP:
+                std::cout << "Theta reference before angle unwrap: " << theta_ref << std::endl;
+                
                 // correzione continuità angolare
-                double dtheta = theta_ref - last_theta_ref;
-                if (dtheta > M_PI) theta_ref -= 2*M_PI;
-                else if (dtheta < -M_PI) theta_ref += 2*M_PI;
-                last_theta_ref = theta_ref;
+                while (theta_ref - last_theta_ref > M_PI)  theta_ref -= 2.0 * M_PI;
+                while (theta_ref - last_theta_ref < -M_PI) theta_ref += 2.0 * M_PI;
+
+                // THETA REF DOPO UNWRAP:
+                std::cout << "Theta reference after angle unwrap: " << theta_ref << std::endl;
 
                 p_(nx + nx*k + 0) = x_ref;
                 p_(nx + nx*k + 1) = y_ref;

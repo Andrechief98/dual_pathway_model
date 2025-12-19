@@ -43,7 +43,7 @@ public:
     // MPC methods
     //void setWeights(const Eigen::VectorXd& Q_, const Eigen::VectorXd& R_, const Eigen::VectorXd& P_);               // set cost weights (q: state weights flattened; r: control weights flattened)
     void buildSolver();
-    void buildReferenceTrajectory(casadi::DM& p, int Np, double cur_x, double cur_y);
+    void buildReferenceTrajectory(casadi::DM& p, int Np, double cur_x, double cur_y, double cur_th);
     void loadParameters();
 
     // Odometry 
@@ -100,6 +100,8 @@ private:
     double w_min = -2;
     double delta_v_max = 0.5;  // [m/s per step] esempio: variazione massima velocità lineare
     double delta_w_max = 1;  // [rad/s per step] esempio: variazione massima velocità angolare
+
+    double old_theta = 0.0;
 
     casadi::Function solver_; // il solver CasADi (nlpsol)
     casadi::DM lbx_full, ubx_full;    // bounds su decision vars
