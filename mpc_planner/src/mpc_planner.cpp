@@ -626,8 +626,8 @@ namespace mpc_planner {
             // std::string object_name = msg->objectsList[i].objectName;
             alfa[i] = msg->objectsList[i].alfa;
             beta[i] = msg->objectsList[i].beta;
-            // std::cout << "Alfa: " << alfa[i] << std::endl;
-            // std::cout << "Beta: " << beta[i] << std::endl;
+            // std::cout << "Alfa_" << i << ": " << alfa[i] << std::endl;
+            // std::cout << "Beta_" << i << ": " << beta[i] << std::endl;
         }
 
         int Q_size = msg->Q.size();

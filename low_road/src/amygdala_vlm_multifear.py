@@ -17,56 +17,93 @@ class AmygdalaNode:
         self.low_road_risks_pub = rospy.Publisher("/amygdala/lowroad/risks", String, queue_size=1)
         self.high_road_risks_pub = rospy.Publisher("/amygdala/highroad/risks", String, queue_size=1) # for plotting 
 
-        # Parametri dinamica
+        # Fear dynamics parameters
         self.wn = 10
         self.zeta = 0.9
         self.alpha = 0.5
 
-        # --- NUOVA STRUTTURA DATI ---
-        # { 'object_id': {'u_low': 0, 'u_high': 0, 'fear': 0, 'dot_fear': 0, 'last_seen': time} }
+        # Data structure
+        # { 
+        #   'object_name': {'u_low': 0, 'u_high': 0, 'fear': 0, 'dot_fear': 0, 'last_seen': time},
+        # }
         self.tracked_objects = {}
         
         self.previous_time_instant = rospy.get_time()
 
     def update_low_road_risk(self, msg):
-        thalamus_info = json.loads(msg.data)
-        rel_thalamus_info = thalamus_info.get("relative_info", {})
-        
-        # Reset temporaneo degli input low_road per gli oggetti non visti in questo frame
-        for obj_id in self.tracked_objects:
-            self.tracked_objects[obj_id]['u_low'] = 0
+        """
+        Structure of the incoming msg:
+        - "object_state": self.object_state,
+        - "relative_info": List[Object]
 
-        for obj_name, data in rel_thalamus_info.items():
-            obs_r = 1 if "rover" in obj_name else 0.3
+        where Object is:
+        "name":{
+            relative_dist" 
+            "relative_orient" 
+            "radial_vel" 
+            }
+        
+        """
+        thalamus_info = json.loads(msg.data)
+        rel_thalamus_info = thalamus_info["relative_info"]
+        
+        # Reset of the u_low for each previously detected object
+        for object_name in self.tracked_objects:
+            self.tracked_objects[object_name]['u_low'] = 0
+
+        # New u_low evaluation for each object
+        for object_name, data in rel_thalamus_info.items():
+            if "rover" in object_name:
+                obs_r = 1 
+            else:
+                obs_r = 0.3
+
             rel_dist = data["relative_dist"] - obs_r
             rel_rad_vel = data["radial_vel"]
 
-            # Calcolo Risk (tua logica originale)
+            # Compute u_low (risk)
             rel_dist_risk = math.exp(-0.5 * ((rel_dist - 0)/2)**2)
             rel_vel_risk = 1 / (1 + math.exp(-0.5 * (-rel_rad_vel - (-1))))
             
-            risk_val = round(rel_dist_risk, 3)
+            u_low = round(rel_dist_risk*rel_vel_risk, 3) 
 
-            # Inizializza l'oggetto se nuovo, altrimenti aggiorna u_low
-            if obj_name not in self.tracked_objects:
-                self.tracked_objects[obj_name] = {'u_low': 0, 'u_high': 0, 'fear': 0, 'dot_fear': 0}
-            
-            self.tracked_objects[obj_name]['u_low'] = risk_val
+            # New object initialization (if not contained in the list)
+            if object_name not in self.tracked_objects:
+                self.tracked_objects[object_name] = {'u_low': 0, 'u_high': 0, 'fear': 0, 'dot_fear': 0}
+
+            # u_low update
+            self.tracked_objects[object_name]['u_low'] = u_low
 
         self.low_road_risks_pub.publish(json.dumps({k: v['u_low'] for k, v in self.tracked_objects.items()}))
 
     def update_high_road_risk(self, msg):
-        data = json.loads(msg.data)
-        objects_list = data.get("objects", [])
+        """
+        Structure of the incoming msg:
+        - summary: str
+        - objects: List[Object]
 
-        # Reset temporaneo high road
-        for obj_id in self.tracked_objects:
-            self.tracked_objects[obj_id]['u_high'] = 0
+        with Object class:
+        - name: str
+        - attributes: str
+        - relative_distance: float
+        - relative_angle: float
+        - action: str
+        - dangerousness: float
+        """
 
-        for obj in objects_list:
-            name = obj.get("label") # Assicurati che il VLM usi gli stessi nomi del talamo
+        vlm_info = json.loads(msg.data)
+        objects_list = vlm_info["objects"]
+
+        # Reset of the u_high for each previously detected object
+        for object_name in self.tracked_objects:
+            self.tracked_objects[object_name]['u_high'] = 0
+
+        for object in objects_list:
+            name = object["name"]
             if name in self.tracked_objects:
-                self.tracked_objects[name]['u_high'] = obj.get("dangerousness", 0)
+                self.tracked_objects[name]['u_high'] = object["dangerousness"]
+
+        self.high_road_risks_pub.publish(json.dumps({k: v['u_high'] for k, v in self.tracked_objects.items()}))
 
     def fear_dynamics(self):
         current_time = rospy.get_time()
@@ -77,32 +114,36 @@ class AmygdalaNode:
 
         all_fears = {}
 
-        # Calcola la dinamica per OGNI oggetto tracciato
+        # Fear dyamics for each tracked object
         for obj_id, state in self.tracked_objects.items():
-            # Calcolo u_eff per l'oggetto specifico
+            
             u_low = state['u_low']
             u_high = state['u_high']
-            u_eff = (u_low + u_high) / 2 if u_high != 0 else u_low
+
+            if u_high != 0.0:
+                u_eff = (u_low + u_high) / 2
+            else:
+                u_eff = u_low
 
             x1 = state['fear']
             x2 = state['dot_fear']
 
-            if u_eff >= x1: # Fase di crescita (2° ordine)
+            if u_eff >= x1: 
                 dx1 = x2
                 dx2 = -2*self.zeta*self.wn*x2 - (self.wn**2)*x1 + (self.wn**2)*u_eff
                 x1 += dx1 * dt
                 x2 += dx2 * dt
-            else: # Fase di rilascio (1° ordine)
+            else: 
                 dx1 = -self.alpha * (x1 - u_eff)
                 x1 += dx1 * dt
                 x2 = dx1
 
-            # Aggiorna lo stato dell'oggetto
+            
             state['fear'] = max(0, min(1.2, round(x1, 3)))
             state['dot_fear'] = round(x2, 3)
             all_fears[obj_id] = state['fear']
 
-        # Pubblica un JSON con i livelli di paura di tutti gli oggetti
+        
         self.fear_level_pub.publish(json.dumps(all_fears))
 
     def spin(self):

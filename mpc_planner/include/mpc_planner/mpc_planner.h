@@ -93,7 +93,7 @@ private:
     std::string model = "euler";
     double robot_length = 1.6;
     double robot_width = 0.8;
-    double dt = 0.2;        // Timestep
+    double dt = 0.5;        // Timestep
     double v_max = 0.5;
     double v_min = 0.0;
     double w_max = 2;
