@@ -71,13 +71,13 @@ class Realtime3DPlotter:
         self.fig.canvas.mpl_connect('close_event', self.handle_close)
 
     def callback_fear_dummy(self, msg):
-        self.fear_level = msg.data
+        self.fear_level = list(json.loads(msg.data).values())[0] # first object
 
     def callback_thalamus(self, msg):
         try:
             data = json.loads(msg.data)
             if "relative_info" in data and len(data["relative_info"]) > 0:
-                object_name = list(data["relative_info"].keys())[0]
+                object_name = list(data["relative_info"].keys())[0] # first object
                 obj = data["relative_info"][object_name]
                 self.dist_buffer.append(obj.get("relative_dist", 0.0))
                 self.rad_buffer.append(obj.get("radial_vel", 0.0))

@@ -20,6 +20,7 @@ class Realtime2DColorMapPlotter:
         rospy.init_node("realtime_2d_fear_plotter", anonymous=True)
         rospy.Subscriber("/fearlevel", String, self.callback_fear_dummy)
         rospy.Subscriber("/thalamus/info", String, self.callback_thalamus)
+        self.fear_level = 0
 
         # Setup plot 2D
         plt.ion()
@@ -37,7 +38,7 @@ class Realtime2DColorMapPlotter:
             return 1.0 / (1.0 + np.exp(-k * (y - y0)))
 
         def fear_function(x, y):
-            return gaussian(x, y) * sigmoid(y)
+            return gaussian(x) * sigmoid(y)
 
         self.fear_function = fear_function
 
@@ -66,14 +67,14 @@ class Realtime2DColorMapPlotter:
         self.fig.canvas.mpl_connect('close_event', self.handle_close)
 
     def callback_fear_dummy(self, msg):
-        # lasciato per compatibilità; non usiamo /fearlevel per la z
-        pass
+
+        self.fear_level = list(json.loads(msg.data).values())[0] # first object
 
     def callback_thalamus(self, msg):
         try:
             data = json.loads(msg.data)
             if "relative_info" in data and len(data["relative_info"]) > 0:
-                object_name = list(data["relative_info"].keys())[0]
+                object_name = list(data["relative_info"].keys())[0] # first object
                 obj = data["relative_info"][object_name]
                 self.dist_buffer.append(obj.get("relative_dist", 0.0))
                 self.rad_buffer.append(obj.get("radial_vel", 0.0))
@@ -92,7 +93,8 @@ class Realtime2DColorMapPlotter:
         # Ultimo punto
         x = self.dist_buffer[-1]
         y = self.rad_buffer[-1]
-        z = self.fear_function(x, y)
+        # z = self.fear_function(x, y)
+        z = float(self.fear_level)
 
         # Aggiorna scia
         self.all_x.append(x)
