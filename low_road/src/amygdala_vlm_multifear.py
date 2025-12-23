@@ -36,7 +36,7 @@ class AmygdalaNode:
         - "object_state": self.object_state,
         - "relative_info": List[Object]
 
-        where Object is:
+        where 'Object' is:
         "name":{
             relative_dist" 
             "relative_orient" 
@@ -69,7 +69,7 @@ class AmygdalaNode:
 
             # New object initialization (if not contained in the list)
             if object_name not in self.tracked_objects:
-                self.tracked_objects[object_name] = {'u_low': 0, 'u_high': 0, 'fear': 0, 'dot_fear': 0}
+                self.tracked_objects[object_name] = {'u_low': 0, 'u_high': None, 'fear': 0, 'dot_fear': 0}
 
             # u_low update
             self.tracked_objects[object_name]['u_low'] = u_low
@@ -96,7 +96,7 @@ class AmygdalaNode:
 
         # Reset of the u_high for each previously detected object
         for object_name in self.tracked_objects:
-            self.tracked_objects[object_name]['u_high'] = 0
+            self.tracked_objects[object_name]['u_high'] = None
 
         for object in objects_list:
             name = object["name"]
@@ -120,8 +120,9 @@ class AmygdalaNode:
             u_low = state['u_low']
             u_high = state['u_high']
 
-            if u_high != 0.0:
-                u_eff = (u_low + u_high) / 2
+            if u_high != None:
+                # u_eff = (u_low + u_high) / 2
+                u_eff = u_high
             else:
                 u_eff = u_low
 

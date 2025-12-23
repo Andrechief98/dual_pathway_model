@@ -9,22 +9,81 @@ from dual_pathway_interfaces.srv import highRoadInfo, highRoadInfoRequest
 from ollama import chat
 import time
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import base64
 from io import BytesIO
 import json
 
-class Object(BaseModel):
-    name: str
-    attributes: str
-    relative_distance: float
-    relative_angle: float
-    action: str
-    dangerousness: float
+SYSTEM_PROMPT = """
+        [SYSTEM]
+        You are a vision model expert in safety and risk analysis. 
+        Your goal is to evaluate the dangerousness associated to each object in the environment using a float value ranging from 0.00 to 1.0.
 
+        [INPUT DATA]
+        1) Current image (time instant t): represents what you see. 
+        2) Spatial information (time instant t): Relative Distance (m), relative Angle (rad), and Radial Velocity (m/s) for each object.
+        3) Memory (time instant t-1): Previous danger scores and spatial data for each object.
+
+                
+        [RISK EVALUATION RULES]
+        - INTRINSIC BASELINE RISKS: Every object starts with a base risk based on its nature.
+        - TEMPORAL EVOLUTION: If Distance(t) < Distance(t-1) or radial velocity is positive, the object is 'Closing In'. Risk must increase accordingly.
+        - POTENTIAL CONSEQUENCES: you must consider which could be the possible consequences related to each object during the risk evaluation.
+        - UNCERTAINTY: If you are uncertain about the possible consequences, it is better to assign an greater value in order to be conservative and ensure more safety.
+        - SMOOTHING: YOU MUST AVOID drastically changing in the risk value (e.g., from 0.1 to 0.9 or from 0.7 to 0.85) unless a critical threat happens.
+        
+        [RISK SCALE]
+        - 0.0 - 0.29: Non vulnerable, small or inhert objects.
+        - 0.3 - 0.59: Objects with predictale movement or relatively close.
+        - 0.6 - 0.79: Humans, animals, robots, rovers or possible unpredictable objects that can move unexpectedly or can be fragile or dangerous.
+        - 0.8 - 1.0: Imminent collision or high unpredictable movements.
+
+        Return a very coinces response considering indicated JSON format.
+
+        [EXAMPLE OF ANALYSIS]
+            {
+                'objects': [
+                    {
+                    "name": "human_worker",
+                    "visual_features": "Person wearing a high-visibility reflective vest, holding a tablet.",
+                    "temporal_analysis": "Distance decreased by 0.5m; the subject is actively closing the gap with the robot.",
+                    "potential_consequence": "Physical injury to the operator and immediate legal/operational shutdown.",
+                    "dangerousness": 0.85
+                    }
+                ]
+            }
+        
+        """
+
+# class Object(BaseModel):
+#     object_id: str = Field(description = "The object ID received in the message, e.g. object_1, object_2, etc")
+#     name: str = Field(description = "The corresponding name of the identified object, e.g. person, robot, rover, cylinder, etc")
+#     # relative_distance: float
+#     # relative_angle: float
+#     spatial_context: str = Field(description="Describe the proximity and orientation (e.g., 'critically close and frontal')")
+#     action: str = Field(description= "The action that the object is doing according to visual, spatial and physical information.")
+#     reasoning: str = Field(description="Brief analysis of the object's behavior and environment.")
+#     dangerousness: float = Field(
+#         description= "Value ranging from 0 to 1 that express both intrinsic dangerousness of the object related to the type of object and what the object is doing.",
+#         ge=0.0,
+#         le=1.0
+#         )
+
+class Object(BaseModel):
+    name: str 
+    visual_features: str = Field(description="Physical characteristics (eg. fragile, heavy, mobile)")
+    temporal_analysis: str = Field(description="Comparison between time instant 't' and 't-1'. Is the object close? Has it changed trajectory? the previous dangerousness is coherent?")
+    potential_consequence: str = Field(description="What could happen in case of collision? What could the object do saddenly and unpredictably?")
+    previous_dangerousness: str
+    reasoning: str = Field(description="Reasong to change the dangerousness value from previous timestep")
+    dangerousness: float = Field(
+        description="Final risk evalution ranging from 0 to 1. ",
+        ge=0.0, 
+        le=1.0
+    )
 
 class vlmResponse(BaseModel):
-    summary: str
+    # overall_safety_context: str = Field(description="Summary of the most critical threats in the scene.")
     objects: List[Object]
 
 class VLMnode:
@@ -40,8 +99,25 @@ class VLMnode:
         # Service client
         self.get_image_service = rospy.ServiceProxy("/get_camera_image", highRoadInfo)
 
-        self.prompt = """aaaaaaaa"""
         self.streaming = True
+
+        self.previous_info = {}
+
+    def build_prompt(self, current_info):
+        current_str = json.dumps(current_info)
+        
+        if self.previous_info == {}:
+            memory_str = current_str
+        else:
+            memory_str = json.dumps(self.previous_info)
+
+        return f"""
+        [CURRENT DATA (t)]
+        {current_str}
+
+        [PREVIOUS DATA (t-1)]
+        {memory_str}
+        """
 
 
     def get_frame_from_camera(self):
@@ -107,52 +183,62 @@ class VLMnode:
         return base64_string
 
 
-    def vlm_inference(self, base64_image, relevant_info):
+    def vlm_inference(self, base64_image, relevant_info_msg):
         
-        # TO ADD: cosine similarity between consecutive images
+        mask_object_name = False
 
-        prompt = f"""
-        I will provide you an image with some spatial and physical information associated to each object in the environment. The image represents what you see.
-        Spatial and physical information includes:
-         - relative distance (in meters) from you
-         - relative orientation (in radians) from you (right-hand convention for positive rotation):
-            - positive value means on your left
-            - negative value means on you right
-         - radial velocity (in m/s) which tells you if the object is moving towards you
-        Your goal is to understand and match visual information with both physical and spatial information. Based on such understanding, you must understand which is the most dangerous object in the environment using a float value between 0 and 1.
+        print("Previous info:")
+        print(self.previous_info)
 
-        Return a response considering indicated JSON format.
+        if mask_object_name:
+            relevant_info = json.loads(relevant_info_msg)
+            print("Current info:")
+            print(relevant_info)
 
-        """
+            # Substituting Explicit keys with "object id"
+            current_info = {}
+            id = 1
+            
+            for k,v in relevant_info.items():
+                object_id = "object_" + str(id)
+                current_info[object_id] = relevant_info[k]
+                id += 1
+            print("Masked current info:")
+            print(current_info)
+        else:
+            current_info = json.loads(relevant_info_msg)
+            print("Current info:")
+            print(current_info)
 
-        # Changin the name from actor to person
-        relevant_info = json.loads(relevant_info)
-        # relevant_info["person"] = relevant_info.pop("actor1")
 
-        relevant_info = {
-            "image_spatial_physical_info" : relevant_info
-        }
-
-        print(relevant_info)
-        
-        prompt += json.dumps(relevant_info)
+        prompt = self.build_prompt(current_info)
 
 
         vlm_inference_response = chat(
             'qwen3-vl:8b-instruct',
             messages=[
-                {
-                    'role': 'user', 
-                    'content': prompt,
-                    'images': [base64_image]
+                    {
+                        'role': 'system',
+                        'content': SYSTEM_PROMPT
+                    },
+                    {
+                        'role': 'user', 
+                        'content': prompt,
+                        'images': [base64_image]
                     }
                 ],
             format=vlmResponse.model_json_schema(),
-            options={'temperature': 0},
-            stream = self.streaming
+            options={
+                'temperature': 0,
+                # 'top_p': 0.8,
+                'top_k':1,              # Exploit only the most probable token
+                'seed': 42
+                },
+            stream = self.streaming,
         )
 
 
+        self.previous_info = current_info
 
         if self.streaming:
             full_response_content = ""
@@ -166,7 +252,16 @@ class VLMnode:
             #     {'role': 'assistant', 'content': full_response_content},
             # ]
             self.image_description_pub.publish(full_response_content)
-            return
+
+            response_dict = json.loads(full_response_content)
+
+
+            for object in response_dict["objects"]:
+                self.previous_info[object['name']] = {
+                "dangerousness": object['dangerousness'],
+                "info": current_info.get(object['name'], "N/A")
+            }
+            
 
 
         else:
@@ -184,7 +279,9 @@ class VLMnode:
             # ]
         
             self.image_description_pub.publish(vlm_inference_response.message.content)
-            return
+
+        
+        return
 
 
     def run(self):

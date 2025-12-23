@@ -1,6 +1,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseArray.h>
+#include <std_srvs/Empty.h>
 #include <nav_msgs/Path.h>
 #include <vector>
 #include <cmath>
@@ -429,6 +430,8 @@ namespace mpc_planner {
             pub_optimal_traj = nh_.advertise<nav_msgs::Path>("/move_base/TrajectoryPlannerROS/local_plan", 1);
             pub_ref_posearray = nh_.advertise<geometry_msgs::PoseArray>("/pose_array",1);
 
+            clearCostmap_service_client = nh_.serviceClient<std_srvs::Empty>("/move_base/clear_costmaps");
+
             loadParameters();
             
             buildSolver();
@@ -797,6 +800,19 @@ namespace mpc_planner {
             return false;
         }
 
+        std_srvs::Empty srv;
+
+        // Wait for the service to become available
+        if (clearCostmap_service_client.waitForExistence(ros::Duration(5.0))) {
+            if (clearCostmap_service_client.call(srv)) {
+                ROS_INFO("Costmaps cleared successfully.");
+            } else {
+                ROS_ERROR("Failed to call clear_costmaps service.");
+            }
+        } else {
+            ROS_WARN("Service /move_base/clear_costmaps not available.");
+        }
+
         global_plan_.clear();
         global_plan_ = orig_global_plan;
 
@@ -859,12 +875,12 @@ namespace mpc_planner {
 
         cs::DM current_state = cs::DM::vertcat({x, y, theta});
 
-        std::cout << "Current state used as warm start:" << std::endl;
+        // std::cout << "Current state used as warm start:" << std::endl;
 
         for (int k = 0; k <= Np; ++k) {
             // Assegna il blocco di nx elementi (3: x,y,theta)
             X_previous(cs::Slice(k * nx, k * nx + nx)) = current_state;
-            std::cout << current_state(0) << " " << current_state(1) << " " <<  current_state(2) << std::endl;
+            // std::cout << current_state(0) << " " << current_state(1) << " " <<  current_state(2) << std::endl;
         }
         
         // Reset slack variables
@@ -1320,13 +1336,13 @@ namespace mpc_planner {
                 }
                 
                 // THETA REF PRIMA UNWRAP:
-                std::cout << "Theta reference before angle unwrap: " << theta_ref << std::endl;
+                // std::cout << "Theta reference before angle unwrap: " << theta_ref << std::endl;
                 
                 double angle_diff = angles::shortest_angular_distance(last_theta_ref, theta_ref);
                 theta_ref = last_theta_ref + angle_diff;
 
                 // THETA REF DOPO UNWRAP:
-                std::cout << "Theta reference after angle unwrap: " << theta_ref << std::endl;
+                // std::cout << "Theta reference after angle unwrap: " << theta_ref << std::endl;
 
                 p_(nx + nx*k + 0) = x_ref;
                 p_(nx + nx*k + 1) = y_ref;

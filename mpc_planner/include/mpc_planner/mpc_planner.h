@@ -71,6 +71,8 @@ private:
     ros::Publisher pub_optimal_traj;
     ros::Publisher pub_ref_posearray;
 
+    ros::ServiceClient clearCostmap_service_client;
+
     std::string odom_frame;
 
     // Global plan information
@@ -84,7 +86,7 @@ private:
     int nx = 3;             // state dim
     int nu = 2;             // control dim
     int ns = 1;             // slack variable dimension
-    int Np = 20;            // prediction horizon
+    int Np = 30;            // prediction horizon
     int Nc = 0;             // control horizon
     int N_cost_params = 0;
     int N_obs = 0;

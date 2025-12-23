@@ -240,7 +240,7 @@ class ThalamusNode:
                 # We save the object
                 self.relative_info[name] = {
                     "relative_dist" : dist_norm,
-                    "relative_orient" : relative_orient,
+                    "relative_angle" : relative_orient,
                     "radial_vel" : v_rad,
                 }
 
