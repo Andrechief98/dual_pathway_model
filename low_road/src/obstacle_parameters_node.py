@@ -34,8 +34,8 @@ class Node:
 
         self.fuzzy_params = {
             "low":    {"alfa": 1, "beta": 0.1},
-            "medium": {"alfa": 50.0, "beta": 0.01},
-            "high":   {"alfa": 100.0, "beta": 0.001},
+            "medium": {"alfa": 50.0, "beta": 0.05},
+            "high":   {"alfa": 100.0, "beta": 0.01},
         }
 
         # --- Setup ROS ---

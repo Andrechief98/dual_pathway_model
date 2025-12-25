@@ -8,11 +8,21 @@ import cv2
 from dual_pathway_interfaces.srv import highRoadInfo, highRoadInfoRequest
 from ollama import chat
 import time
+import os
 from typing import List
 from pydantic import BaseModel, Field
+from typing import Optional
 import base64
 from io import BytesIO
 import json
+
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+relative_path = "../config/vlm_config.yaml"
+full_path = os.path.join(script_dir, relative_path)
+
+print("Full path")
+print(full_path)
 
 SYSTEM_PROMPT = """
         [SYSTEM]
@@ -32,13 +42,13 @@ SYSTEM_PROMPT = """
         - UNCERTAINTY: If you are uncertain about the possible consequences, it is better to assign an greater value in order to be conservative and ensure more safety.
         - SMOOTHING: YOU MUST AVOID drastically changing in the risk value (e.g., from 0.1 to 0.9 or from 0.7 to 0.85) unless a critical threat happens.
         
-        [RISK SCALE]
-        - 0.0 - 0.29: Non vulnerable, small or inhert objects.
-        - 0.3 - 0.59: Objects with predictale movement or relatively close.
-        - 0.6 - 0.79: Humans, animals, robots, rovers or possible unpredictable objects that can move unexpectedly or can be fragile or dangerous.
-        - 0.8 - 1.0: Imminent collision or high unpredictable movements.
+        [MANDATORY INTRINSIC RISK SCALE]
+        - 0.0 to 0.19 [LOW]: Inert, static, or small non-vulnerable objects (e.g., walls, fixed pillars, trash bins).
+        - 0.2 to 0.49 [MODERATE]: Objects with predictable movement or dynamic objects at a safe distance.
+        - 0.5 to 0.79 [HIGH]: Mandatory baseline for Humans, animals, and other robots. Includes fragile or unpredictable entities that may change trajectory suddenly.
+        - 0.8 to 1.0 [CRITICAL]: Imminent collision path, extreme proximity (<0.5m), or high-speed erratic movement.
 
-        Return a very coinces response considering indicated JSON format.
+        Return a very coinces response considering indicated JSON format. Prioritize Human safety.
 
         [EXAMPLE OF ANALYSIS]
             {
@@ -46,8 +56,10 @@ SYSTEM_PROMPT = """
                     {
                     "name": "human_worker",
                     "visual_features": "Person wearing a high-visibility reflective vest, holding a tablet.",
-                    "temporal_analysis": "Distance decreased by 0.5m; the subject is actively closing the gap with the robot.",
+                    "temporal_analysis": "Distance decreased by 0.5m; the subject is actively closing.",
                     "potential_consequence": "Physical injury to the operator and immediate legal/operational shutdown.",
+                    "previous_dangerousness": 0.75,
+                    "reasoning": "the distance is decreased. Due to potential injury to the operator it is better to increase the dangerousness.",
                     "dangerousness": 0.85
                     }
                 ]
@@ -74,7 +86,7 @@ class Object(BaseModel):
     visual_features: str = Field(description="Physical characteristics (eg. fragile, heavy, mobile)")
     temporal_analysis: str = Field(description="Comparison between time instant 't' and 't-1'. Is the object close? Has it changed trajectory? the previous dangerousness is coherent?")
     potential_consequence: str = Field(description="What could happen in case of collision? What could the object do saddenly and unpredictably?")
-    previous_dangerousness: str
+    previous_dangerousness: float = Field(description="Value of the risk evaluation from previous timestep.")
     reasoning: str = Field(description="Reasong to change the dangerousness value from previous timestep")
     dangerousness: float = Field(
         description="Final risk evalution ranging from 0 to 1. ",

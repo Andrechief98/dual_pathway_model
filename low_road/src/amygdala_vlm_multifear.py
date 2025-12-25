@@ -53,7 +53,7 @@ class AmygdalaNode:
 
         # New u_low evaluation for each object
         for object_name, data in rel_thalamus_info.items():
-            if "rover" in object_name:
+            if "rover" in object_name or "robot" in object_name:
                 obs_r = 1 
             else:
                 obs_r = 0.3
@@ -121,8 +121,8 @@ class AmygdalaNode:
             u_high = state['u_high']
 
             if u_high != None:
-                # u_eff = (u_low + u_high) / 2
-                u_eff = u_high
+                u_eff = (u_low + u_high) / 2
+                # u_eff = u_high
             else:
                 u_eff = u_low
 

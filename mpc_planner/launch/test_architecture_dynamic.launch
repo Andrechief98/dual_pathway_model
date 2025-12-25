@@ -86,7 +86,7 @@
     </group>
     
 
-    <node pkg="low_road" type="amygdala_vlm.py" name="amygdala" output="screen" />
+    <node pkg="low_road" type="amygdala_vlm.py" name="amygdala_vlm_multifear" output="screen" />
     <node pkg="low_road" type="obstacle_parameters_node.py" name="obstacle_parameters_node" output="screen" />
     <node pkg="low_road" type="constraints_visualization.py" name="constraint_visualizer_rviz" output="screen" />
     <!-- <node pkg="low_road" type="plot_fear_level.py" name="plot_fear_level" output="screen" /> -->
