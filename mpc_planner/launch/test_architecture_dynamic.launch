@@ -3,7 +3,7 @@
 
     <rosparam command="load" file="$(find mpc_planner)/config/mpc_params.yaml" />
 
-    <arg name="map_file"                                                default="$(find mpc_planner)/config/maps/map.yaml"                         doc="Path to a map .yaml file (required)." />
+    <arg name="map_file"                                                default="$(find mpc_planner)/config/maps/map_1.yaml"                         doc="Path to a map .yaml file (required)." />
     <arg name="virtual_walls_map_file"                                  default=""                                           doc="Path to a virtual walls map .yaml file (optional)." />
     <arg name="with_virtual_walls"                                      default="false" />
     <arg name="prefix"                                                  default="" />
@@ -86,7 +86,7 @@
     </group>
     
 
-    <node pkg="low_road" type="amygdala_vlm.py" name="amygdala_vlm_multifear" output="screen" />
+    <node pkg="low_road" type="amygdala_vlm_multifear.py" name="amygdala_vlm" output="screen" />
     <node pkg="low_road" type="obstacle_parameters_node.py" name="obstacle_parameters_node" output="screen" />
     <node pkg="low_road" type="constraints_visualization.py" name="constraint_visualizer_rviz" output="screen" />
     <!-- <node pkg="low_road" type="plot_fear_level.py" name="plot_fear_level" output="screen" /> -->

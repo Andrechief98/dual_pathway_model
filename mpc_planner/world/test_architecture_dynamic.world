@@ -24,7 +24,7 @@
     <include>
       <uri>model://person_walking</uri>
       <name>person</name>
-      <pose>6.7 0 0.1 0 0 -1.57</pose> 
+      <pose>7 -2.5 0.1 0 0 2.355</pose> 
       <plugin name="human_controller" filename="libgazebo_ros_planar_move.so">
         <robotNamespace>/person_walking</robotNamespace>
         <commandTopic>cmd_vel</commandTopic>
@@ -38,7 +38,7 @@
     <include>
       <uri>model://mars_rover</uri>
       <name>rover</name>
-      <pose>3 1 0.1 0 0 -0.785</pose> 
+      <pose>7 2.5 0.1 0 0 -2.355</pose> 
       <plugin name="human_controller" filename="libgazebo_ros_planar_move.so">
         <robotNamespace>/rover</robotNamespace>
         <commandTopic>cmd_vel</commandTopic>

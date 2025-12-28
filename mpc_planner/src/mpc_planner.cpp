@@ -138,7 +138,9 @@ namespace mpc_planner {
                 cs::MX fut_obs_pos = obs_pos + k * dt * obs_vel;
 
                 cs::MX diff = xk(cs::Slice(0,2)) - fut_obs_pos;
-                cs::MX distance = cs::MX::sqrt(cs::MX::sum1(diff*diff)) - obs_r;
+                cs::MX distance = cs::MX::sqrt(cs::MX::sum1(diff*diff))- obs_r;
+
+                distance = cs::MX::fmax(distance, 0.001);
 
                 // Penalty logaritmico
                 cs::MX obstacle_penalty = -alfa_j * cs::MX::log(beta_j * distance); //alfa/(0.05*(distance * distance))
@@ -284,7 +286,7 @@ namespace mpc_planner {
                 cs::MX dx = xk1(0) - fut_obs_pos(0);
                 cs::MX dy = xk1(1) - fut_obs_pos(1);
 
-                // Rotazione nel frame del robot (evitare shadowing con variabile 's')
+                // Rotazione nel frame del robot 
                 cs::MX cos_m = cs::MX::cos(-xk1(2));
                 cs::MX sin_m = cs::MX::sin(-xk1(2));
                 cs::MX dxr = cos_m * dx - sin_m * dy;
@@ -800,18 +802,18 @@ namespace mpc_planner {
             return false;
         }
 
-        std_srvs::Empty srv;
+        // std_srvs::Empty srv;
 
         // Wait for the service to become available
-        if (clearCostmap_service_client.waitForExistence(ros::Duration(5.0))) {
-            if (clearCostmap_service_client.call(srv)) {
-                ROS_INFO("Costmaps cleared successfully.");
-            } else {
-                ROS_ERROR("Failed to call clear_costmaps service.");
-            }
-        } else {
-            ROS_WARN("Service /move_base/clear_costmaps not available.");
-        }
+        // if (clearCostmap_service_client.waitForExistence(ros::Duration(5.0))) {
+        //     if (clearCostmap_service_client.call(srv)) {
+        //         ROS_INFO("Costmaps cleared successfully.");
+        //     } else {
+        //         ROS_ERROR("Failed to call clear_costmaps service.");
+        //     }
+        // } else {
+        //     ROS_WARN("Service /move_base/clear_costmaps not available.");
+        // }
 
         global_plan_.clear();
         global_plan_ = orig_global_plan;
@@ -1258,7 +1260,7 @@ namespace mpc_planner {
 
 
                 } else {
-                    std::cout << "❌ Solver non ha trovato una soluzione feasible. Stato: " << status << "\n";
+                    std::cout << "❌ Feasible solution not found. State: " << status << "\n";
                     // ROS_ERROR("Feasible solution not found");
 
                     // Stop robot
