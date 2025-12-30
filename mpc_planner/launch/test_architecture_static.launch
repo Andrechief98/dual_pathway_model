@@ -8,7 +8,7 @@
     <arg name="with_virtual_walls"                                      default="false" />
     <arg name="prefix"                                                  default="" />
     <arg name="namespace"                                               default="$(arg prefix)"                                             doc="Namespace to push all topics into."/>
-
+    <arg name="use_warm_start"                                          default="true" />
 
     <include file="$(find mir_gazebo)/launch/mir_empty_world.launch">
         <arg name="world_name" value= "$(find mpc_planner)/world/test_architecture_static.world"/> 
@@ -23,6 +23,7 @@
 
     <!-- Nel caso in cui venga specificato un namespace -->
     <group if="$(eval namespace != '')" ns="$(arg namespace)">
+        <param name="use_warm_start" value="$(arg use_warm_start)" />
         <include file="$(find mir_navigation)/launch/start_maps.launch">
             <arg name="map_file"                                                                        value="$(arg map_file)" />
             <arg name="virtual_walls_map_file"                                                          value="$(arg virtual_walls_map_file)" />
@@ -55,6 +56,7 @@
 
     <!-- Nel caso in cui non venga specificato un namespace -->
     <group unless="$(eval namespace != '')">
+        <param name="use_warm_start" value="$(arg use_warm_start)" />
         <include file="$(find mir_navigation)/launch/start_maps.launch">
             <arg name="map_file" value="$(arg map_file)" />
             <arg name="virtual_walls_map_file" value="$(arg virtual_walls_map_file)" />
@@ -87,7 +89,7 @@
     
 
     <node pkg="low_road" type="amygdala_vlm_multifear.py" name="amygdala" output="screen" />
-    <node pkg="low_road" type="obstacle_parameters_node.py" name="obstacle_parameters_node" output="screen" />
+    <node pkg="low_road" type="fuzzy_mpc_params_contr.py" name="fuzzy_mpc_params_contr_node" output="screen" />
     <node pkg="low_road" type="constraints_visualization.py" name="constraint_visualizer_rviz" output="screen" />
     <!-- <node pkg="low_road" type="plot_fear_level.py" name="plot_fear_level" output="screen" /> -->
 

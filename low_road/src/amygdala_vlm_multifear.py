@@ -17,6 +17,14 @@ class AmygdalaNode:
         self.low_road_risks_pub = rospy.Publisher("/amygdala/lowroad/risks", String, queue_size=1)
         self.high_road_risks_pub = rospy.Publisher("/amygdala/highroad/risks", String, queue_size=1) # for plotting 
 
+        # Relative distance - Gaussian function parameters
+        self.mu_d = 0
+        self.sigma_d = 2.0
+
+        # Radial velocity - Logistic function parameters
+        self.v0 = 0
+        self.k = 4
+
         # Fear dynamics parameters
         self.wn = 10
         self.zeta = 0.9
@@ -29,6 +37,14 @@ class AmygdalaNode:
         self.tracked_objects = {}
         
         self.previous_time_instant = rospy.get_time()
+
+    def gaussian_function(self, rel_dist):
+        """Function for relative distance risk"""
+        return math.exp(-0.5 * ((rel_dist - self.mu_d)/self.sigma_d)**2)
+
+    def logistic_fuction(self, rel_rad_vel):
+        """Function for radial velocity risk"""
+        return 1 / (1 + math.exp(-self.k * (-rel_rad_vel - self.v0)))
 
     def update_low_road_risk(self, msg):
         """
@@ -62,8 +78,8 @@ class AmygdalaNode:
             rel_rad_vel = data["radial_vel"]
 
             # Compute u_low (risk)
-            rel_dist_risk = math.exp(-0.5 * ((rel_dist - 0)/2)**2)
-            rel_vel_risk = 1 / (1 + math.exp(-0.5 * (-rel_rad_vel - (-1))))
+            rel_dist_risk = self.gaussian_function(rel_dist)
+            rel_vel_risk = self.logistic_fuction(rel_rad_vel)
             
             u_low = round(rel_dist_risk*rel_vel_risk, 3) 
 
@@ -121,7 +137,7 @@ class AmygdalaNode:
             u_high = state['u_high']
 
             if u_high != None:
-                u_eff = (u_low + u_high) / 2
+                u_eff = (0.4*u_low + 0.6*u_high)
                 # u_eff = u_high
             else:
                 u_eff = u_low

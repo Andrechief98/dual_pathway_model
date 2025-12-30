@@ -424,6 +424,12 @@ namespace mpc_planner {
                 odom_frame = tf_prefix + "/odom";
             }
             
+            if (nh_.getParam("/use_warm_start", use_warm_start)) {
+                ROS_INFO("MPC: 'use_warm_start' parameter found: %d", use_warm_start);
+            } else {
+                ROS_WARN("MPC: parameter 'use_warm_start' NOT found in %s! Using default value: true", nh_.getNamespace().c_str());
+                use_warm_start = true;
+            }
 
             sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
             sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &MpcPlanner::obstacleGazeboCallback, this);
@@ -432,7 +438,7 @@ namespace mpc_planner {
             pub_optimal_traj = nh_.advertise<nav_msgs::Path>("/move_base/TrajectoryPlannerROS/local_plan", 1);
             pub_ref_posearray = nh_.advertise<geometry_msgs::PoseArray>("/pose_array",1);
 
-            clearCostmap_service_client = nh_.serviceClient<std_srvs::Empty>("/move_base/clear_costmaps");
+            clearCostmap_service_client = nh_.serviceClient<std_srvs::Empty>("/move_base_node/clear_costmaps");
 
             loadParameters();
             
@@ -812,7 +818,7 @@ namespace mpc_planner {
         //         ROS_ERROR("Failed to call clear_costmaps service.");
         //     }
         // } else {
-        //     ROS_WARN("Service /move_base/clear_costmaps not available.");
+        //     ROS_WARN("Service /move_base_node/clear_costmaps not available.");
         // }
 
         global_plan_.clear();
@@ -843,6 +849,10 @@ namespace mpc_planner {
 
 
         U_previous = cs::DM::zeros(nu * Np);
+        // for (int k = 0; k < Np; ++k) {
+        //     U_previous(nu * k + 0) = 0.5; // Una piccola velocità lineare di spinta
+        //     U_previous(nu * k + 1) = 0.0;
+        // }
     
         X_previous = cs::DM::zeros(nx * (Np + 1)); 
         geometry_msgs::PoseStamped robot_pose_odom;
@@ -979,22 +989,22 @@ namespace mpc_planner {
             std::cout << "------------- DISTANCE NOT REACHED ----------------" << std::endl;
             float angle_ = std::atan2((goal_pos[1] - current_rob_pos[1]), (goal_pos[0] - current_rob_pos[0]));
 
-            if (std::fabs(std::atan2(std::sin(angle_ - current_rob_orient), std::cos(angle_ - current_rob_orient))) >_PI/2){
-                cmd_vel.linear.x = 0.0;
-                cmd_vel.angular.z = 0.5*std::atan2(std::sin(angle_ - current_rob_orient), std::cos(angle_- current_rob_orient));
+            // if (std::fabs(std::atan2(std::sin(angle_ - current_rob_orient), std::cos(angle_ - current_rob_orient))) >_PI/2){
+            //     cmd_vel.linear.x = 0.0;
+            //     cmd_vel.angular.z = 0.5*std::atan2(std::sin(angle_ - current_rob_orient), std::cos(angle_- current_rob_orient));
 
-                U_previous = cs::DM::zeros(nu * Np); // Input passati azzerati
-                s_previous = cs::DM::zeros(ns);
-                s_obs_previous = cs::DM::zeros(Np * N_obs);
+            //     U_previous = cs::DM::zeros(nu * Np); // Input passati azzerati
+            //     s_previous = cs::DM::zeros(ns);
+            //     s_obs_previous = cs::DM::zeros(Np * N_obs);
                 
-                cs::DM current_state_dm = cs::DM::vertcat({x, y, theta});
-                X_previous = cs::DM::zeros(nx * (Np + 1));
-                for (int k = 0; k <= Np; ++k) {
-                    X_previous(cs::Slice(k * nx, k * nx + nx)) = current_state_dm;
-                }
+            //     cs::DM current_state_dm = cs::DM::vertcat({x, y, theta});
+            //     X_previous = cs::DM::zeros(nx * (Np + 1));
+            //     for (int k = 0; k <= Np; ++k) {
+            //         X_previous(cs::Slice(k * nx, k * nx + nx)) = current_state_dm;
+            //     }
 
-            } 
-            else{
+            // } 
+            // else{
 
                 cs::DM p = cs::DM::zeros(nx + nx*(Np+1) + N_cost_params + nu + N_obs*N_obs_info, 1);
                 p(0) = x;
@@ -1079,7 +1089,7 @@ namespace mpc_planner {
 
                 if (status == "Solve_Succeeded" || status == "Feasible_Point_Found" || status == "Maximum_Iterations_Exceeded") {
 
-                    std::cout << "✅ Feasible solution found.\n";
+                    std::cout << "✅ Feasible solution found. State: " << status << std::endl;
 
                     if (status == "Maximum_Iterations_Exceeded"){
                         ROS_WARN("Maximum_Iterations_Exceeded");
@@ -1105,19 +1115,19 @@ namespace mpc_planner {
 
                     for (int k = 0; k < Np; ++k) {
                         // --- Stati ---
-                        double x = X_opt(nx*k + 0).scalar();
-                        double y = X_opt(nx*k + 1).scalar();
-                        double th = X_opt(nx*k + 2).scalar();
+                        double x_ = X_opt(nx*k + 0).scalar();
+                        double y_ = X_opt(nx*k + 1).scalar();
+                        double th_ = X_opt(nx*k + 2).scalar();
 
                         double x_r = p(nx + nx*k + 0).scalar();
                         double y_r = p(nx + nx*k + 1).scalar();
                         double th_r = p(nx + nx*k + 2).scalar();
 
-                        double dth = std::atan2(std::sin(th_r - th), std::cos(th_r - th));
+                        double dth_ = std::atan2(std::sin(th_r - th_), std::cos(th_r - th_));
 
-                        state_cost += Q(0) * (x_r - x)*(x_r - x)
-                                    + Q(1) * (y_r - y)*(y_r - y)
-                                    + Q(2) * dth*dth;
+                        state_cost += Q(0) * (x_r - x_)*(x_r - x_)
+                                    + Q(1) * (y_r - y_)*(y_r - y_)
+                                    + Q(2) * dth_*dth_;
 
                         // --- Input ---
                         double v = U_opt(nu*k + 0).scalar();
@@ -1154,18 +1164,18 @@ namespace mpc_planner {
 
 
                     // --- Terminal cost ---
-                    double xN = X_opt(nx*Np + 0).scalar();
-                    double yN = X_opt(nx*Np + 1).scalar();
-                    double thN = X_opt(nx*Np + 2).scalar();
+                    double xN_ = X_opt(nx*Np + 0).scalar();
+                    double yN_ = X_opt(nx*Np + 1).scalar();
+                    double thN_ = X_opt(nx*Np + 2).scalar();
 
                     double x_rN = p(nx + nx*Np + 0).scalar();
                     double y_rN = p(nx + nx*Np + 1).scalar();
                     double th_rN = p(nx + nx*Np + 2).scalar();
 
-                    double dth_N = std::atan2(std::sin(th_rN - thN), std::cos(th_rN - thN));
-                    state_cost += P(0) * (x_rN - xN)*(x_rN - xN)
-                                + P(1) * (y_rN - yN)*(y_rN - yN)
-                                + P(2) * dth_N*dth_N;
+                    double dth_N_ = std::atan2(std::sin(th_rN - thN_), std::cos(th_rN - thN_));
+                    state_cost += P(0) * (x_rN - xN_)*(x_rN - xN_)
+                                + P(1) * (y_rN - yN_)*(y_rN - yN_)
+                                + P(2) * dth_N_*dth_N_;
 
                     // --- Terminal slack ---
                     for (int i = 0; i < ns; ++i) {
@@ -1185,31 +1195,77 @@ namespace mpc_planner {
                     // Extracion of the first control input
                     cmd_vel.linear.x = double(U_opt(0));
                     cmd_vel.angular.z = double(U_opt(1));
+
+
+
+
+                    // std::cout << "U_previous before shift: " << std::endl;
+                    // for (int k = 0; k < Np-1; ++k) {
+                    //     std::cout << U_previous(nu*k + 0) << std::endl;
+                    //     std::cout << U_previous(nu*k + 1) << std::endl;
+                    // }
+
+                    // std::cout << "X_previous before shift: " << std::endl;
+                    // for (int k = 0; k < Np; ++k) {
+                    //     std::cout << X_previous(nx*k + 0) << std::endl;
+                    //     std::cout << X_previous(nx*k + 1) << std::endl;
+                    //     std::cout << X_previous(nx*k + 2) << std::endl;
+                    // }
+
+                    if (use_warm_start){
+                        // Shift inputs
+                        for (int k = 0; k < Np-1; ++k) {
+                            U_previous(nu*k + 0) = U_opt(nu*(k+1) + 0);
+                            U_previous(nu*k + 1) = U_opt(nu*(k+1) + 1);
+                        }
+
+                        // Ultimo input: ripeti l’ultimo della precedente previsione
+                        U_previous(nu*(Np-1) + 0) = U_opt(nu*(Np-1) + 0);
+                        U_previous(nu*(Np-1) + 1) = U_opt(nu*(Np-1) + 1);
+                        
+                        // Shift stati
+                        for (int k = 0; k < Np; ++k) {
+                            X_previous(nx*k + 0) = X_opt(nx*(k+1) + 0);
+                            X_previous(nx*k + 1) = X_opt(nx*(k+1) + 1);
+                            X_previous(nx*k + 2) = X_opt(nx*(k+1) + 2);
+                        }
+
+                        // Stato terminale: mantieni ultimo
+                        X_previous(nx*Np + 0) = X_opt(nx*Np + 0);
+                        X_previous(nx*Np + 1) = X_opt(nx*Np + 1);
+                        X_previous(nx*Np + 2) = X_opt(nx*Np + 2);
+
+                        // Primo stato della previsione = stato reale corrente del robot
+                        X_previous(0) = x;
+                        X_previous(1) = y;
+                        X_previous(2) = theta;
+                    }
+                    else{
+                        for (int k = 0; k < Np-1; ++k) {
+                            U_previous(nu*k + 0) = 0;
+                            U_previous(nu*k + 1) = 0;
+                        }
+
+                        for (int k = 0; k < Np+1; ++k) {
+                            X_previous(nx*k + 0) = x;
+                            X_previous(nx*k + 1) = y;
+                            X_previous(nx*k + 2) = theta;
+                        }
+                    }
                     
-                    // Shift inputs
-                    for (int k = 0; k < Np-1; ++k) {
-                        U_previous(nu*k + 0) = U_opt(nu*(k+1) + 0);
-                        U_previous(nu*k + 1) = U_opt(nu*(k+1) + 1);
-                    }
-                    // Ultimo input: ripeti l’ultimo della precedente previsione
-                    U_previous(nu*(Np-1) + 0) = U_opt(nu*(Np-1) + 0);
-                    U_previous(nu*(Np-1) + 1) = U_opt(nu*(Np-1) + 1);
+                    
+                    // std::cout << "U_previous after shift: " << std::endl;
+                    // for (int k = 0; k < Np-1; ++k) {
+                    //     std::cout << U_previous(nu*k + 0) << std::endl;
+                    //     std::cout << U_previous(nu*k + 1) << std::endl;
+                    // }
 
-                    // Shift stati
-                    for (int k = 0; k < Np; ++k) {
-                        X_previous(nx*k + 0) = X_opt(nx*(k+1) + 0);
-                        X_previous(nx*k + 1) = X_opt(nx*(k+1) + 1);
-                        X_previous(nx*k + 2) = X_opt(nx*(k+1) + 2);
-                    }
-                    // Stato terminale: mantieni ultimo
-                    X_previous(nx*Np + 0) = X_opt(nx*Np + 0);
-                    X_previous(nx*Np + 1) = X_opt(nx*Np + 1);
-                    X_previous(nx*Np + 2) = X_opt(nx*Np + 2);
-
-                    // Primo stato della previsione = stato reale corrente del robot
-                    X_previous(0) = x;
-                    X_previous(1) = y;
-                    X_previous(2) = theta;
+                    // std::cout << "X_previous after shift: " << std::endl;
+                    // for (int k = 0; k < Np; ++k) {
+                    //     std::cout << X_previous(nx*k + 0) << std::endl;
+                    //     std::cout << X_previous(nx*k + 1) << std::endl;
+                    //     std::cout << X_previous(nx*k + 2) << std::endl;
+                    // }
 
                     s_previous = s_opt;
 
@@ -1260,7 +1316,7 @@ namespace mpc_planner {
 
 
                 } else {
-                    std::cout << "❌ Feasible solution not found. State: " << status << "\n";
+                    std::cout << "❌ Feasible solution not found. State: " << status << std::endl;
                     // ROS_ERROR("Feasible solution not found");
 
                     // Stop robot
@@ -1277,7 +1333,7 @@ namespace mpc_planner {
 
                 }
 
-            }
+            // }
             
         }
 

@@ -1,0 +1,104 @@
+<launch>
+
+
+    <rosparam command="load" file="$(find mpc_planner)/config/mpc_params.yaml" />
+
+    <arg name="map_file"                                                default="$(find mpc_planner)/config/maps/map_1.yaml"                         doc="Path to a map .yaml file (required)." />
+    <arg name="virtual_walls_map_file"                                  default=""                                           doc="Path to a virtual walls map .yaml file (optional)." />
+    <arg name="with_virtual_walls"                                      default="false" />
+    <arg name="prefix"                                                  default="" />
+    <arg name="namespace"                                               default="$(arg prefix)"                                             doc="Namespace to push all topics into."/>
+    <arg name="use_warm_start"                                          default="false" />
+
+    <include file="$(find mir_gazebo)/launch/mir_empty_world.launch">
+        <arg name="world_name" value= "$(find mpc_planner)/world/test_architecture_risk_assessment.world"/> 
+    </include>
+
+
+    <include file="$(find mir_navigation)/launch/amcl.launch">
+        <arg name="initial_pose_x"                                                          value="0.0" />
+        <arg name="initial_pose_y"                                                          value="0.0" />
+    </include>
+
+
+    <!-- Nel caso in cui venga specificato un namespace -->
+    <group if="$(eval namespace != '')" ns="$(arg namespace)">
+        <param name="use_warm_start" value="$(arg use_warm_start)" />
+        <include file="$(find mir_navigation)/launch/start_maps.launch">
+            <arg name="map_file"                                                                        value="$(arg map_file)" />
+            <arg name="virtual_walls_map_file"                                                          value="$(arg virtual_walls_map_file)" />
+            <arg name="with_virtual_walls"                                                              value="$(arg with_virtual_walls)" />
+        </include>
+
+        <node pkg="move_base" type="move_base" respawn="false" name="move_base_node" output="screen" clear_params="true">
+            <param name="SBPLLatticePlanner/primitive_filename"                                                 value="$(find mir_navigation)/mprim/unicycle_highcost_5cm.mprim" />
+            <rosparam file="$(find mir_navigation)/config/move_base_common_params.yaml"                         command="load" />
+            <rosparam file="$(find mir_navigation)/config/sbpl_global_params.yaml"                              command="load" />
+
+            <rosparam file="$(find mpc_planner)/config/move_base_params.yaml"                                   command="load"/>
+
+
+            <!-- global costmap params -->
+            <rosparam file="$(find mir_navigation)/config/costmap_common_params.yaml"                           command="load"      ns="global_costmap"         subst_value="true" />
+            <rosparam file="$(find mir_navigation)/config/costmap_global_params.yaml"                           command="load" />
+            <rosparam file="$(find mir_navigation)/config/costmap_global_params_plugins_virtual_walls.yaml"     command="load"      if="$(arg with_virtual_walls)" />
+            <rosparam file="$(find mir_navigation)/config/costmap_global_params_plugins_no_virtual_walls.yaml"  command="load"      unless="$(arg with_virtual_walls)" />
+            <!-- local costmap params -->
+            <rosparam file="$(find mir_navigation)/config/costmap_common_params.yaml"                           command="load"      ns="local_costmap" subst_value="true" />
+            <rosparam file="$(find mir_navigation)/config/costmap_local_params.yaml"                            command="load"      subst_value="true" />
+            <rosparam file="$(find mir_navigation)/config/costmap_local_params_plugins_virtual_walls.yaml"      command="load"      if="$(arg with_virtual_walls)" />
+            <rosparam file="$(find mir_navigation)/config/costmap_local_params_plugins_no_virtual_walls.yaml"   command="load"      unless="$(arg with_virtual_walls)" />
+            <remap from="map" to="/map" />
+            <remap from="odom" to="/odometry/filtered"/>
+
+        </node>
+    </group>
+
+    <!-- Nel caso in cui non venga specificato un namespace -->
+    <group unless="$(eval namespace != '')">
+        <param name="use_warm_start" value="$(arg use_warm_start)" />
+        <include file="$(find mir_navigation)/launch/start_maps.launch">
+            <arg name="map_file" value="$(arg map_file)" />
+            <arg name="virtual_walls_map_file" value="$(arg virtual_walls_map_file)" />
+            <arg name="with_virtual_walls" value="$(arg with_virtual_walls)" />
+        </include>
+
+        <node pkg="move_base" type="move_base" respawn="false" name="move_base_node" output="screen" clear_params="true">
+            <param name="SBPLLatticePlanner/primitive_filename"                                                 value="$(find mir_navigation)/mprim/unicycle_highcost_5cm.mprim" />
+            <rosparam file="$(find mir_navigation)/config/move_base_common_params.yaml"                         command="load" />
+            <rosparam file="$(find mir_navigation)/config/sbpl_global_params.yaml"                              command="load" />
+
+            <rosparam file="$(find mpc_planner)/config/move_base_params.yaml"                                   command="load"/>
+
+            <!-- global costmap params -->
+            <rosparam file="$(find mir_navigation)/config/costmap_common_params.yaml"                           command="load"      ns="global_costmap"         subst_value="true" />
+            <rosparam file="$(find mir_navigation)/config/costmap_global_params.yaml"                           command="load" />
+            <rosparam file="$(find mir_navigation)/config/costmap_global_params_plugins_virtual_walls.yaml"     command="load"      if="$(arg with_virtual_walls)" />
+            <rosparam file="$(find mir_navigation)/config/costmap_global_params_plugins_no_virtual_walls.yaml"  command="load"      unless="$(arg with_virtual_walls)" />
+            <!-- local costmap params -->
+            <rosparam file="$(find mir_navigation)/config/costmap_common_params.yaml"                           command="load"      ns="local_costmap" subst_value="true" />
+            <rosparam file="$(find mir_navigation)/config/costmap_local_params.yaml"                            command="load"      subst_value="true" />
+            <rosparam file="$(find mir_navigation)/config/costmap_local_params_plugins_virtual_walls.yaml"      command="load"      if="$(arg with_virtual_walls)" />
+            <rosparam file="$(find mir_navigation)/config/costmap_local_params_plugins_no_virtual_walls.yaml"   command="load"      unless="$(arg with_virtual_walls)" />
+            <remap from="map" to="/map" />
+            <remap from="odom" to="/odometry/filtered"/>
+
+        </node>
+
+    </group>
+    
+
+    <node pkg="low_road" type="amygdala_vlm_multifear.py" name="amygdala" output="screen" />
+    <node pkg="low_road" type="test2_mpc_parameters_node.py" name="test2_mpc_parameters_node" output="screen" />
+    <node pkg="low_road" type="constraints_visualization.py" name="constraint_visualizer_rviz" output="screen" />
+    <!-- <node pkg="low_road" type="plot_fear_level.py" name="plot_fear_level" output="screen" /> -->
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find mir_navigation)/rviz/navigation.rviz" output="screen" />
+    <!-- <node pkg="high_road" type="cerebral_cortex" name="cerebral_cortex" output="screen"/> -->
+
+
+</launch>
+
+
+
+

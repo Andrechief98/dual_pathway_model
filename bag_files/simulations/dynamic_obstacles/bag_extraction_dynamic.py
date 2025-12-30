@@ -15,7 +15,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 bag_files_list = [
     "MPC_dynamic.bag",
     "MPC_lr_dynamic.bag",
-    "MPC_dp_dynamic.bag"
+    "MPC_dp_dynamic.bag",
 ]
 
 # Parametri footprint / plotting (adattati dal primo script)

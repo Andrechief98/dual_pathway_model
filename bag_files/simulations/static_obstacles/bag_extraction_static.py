@@ -19,7 +19,7 @@ bag_files_list = [
     "MPC_dp_static.bag",
 ] 
 
-ROBOT_SEMI_AXIS_A = 0.6  # Lunghezza (asse x locale)
+ROBOT_SEMI_AXIS_A = 0.8  # Lunghezza (asse x locale)
 ROBOT_SEMI_AXIS_B = 0.4  # Larghezza (asse y locale)
 DT_FOOTPRINT = 2.0       # Ogni quanti secondi disegnare la sagoma
 

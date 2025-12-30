@@ -81,7 +81,6 @@ private:
     bool initialized_ = false;
     bool goal_reached_ = false;
 
-
     // MPC parameters
     int nx = 3;             // state dim
     int nu = 2;             // control dim
@@ -119,6 +118,7 @@ private:
     Eigen::VectorXd alfa;        
     Eigen::VectorXd beta;
 
+    bool use_warm_start;
 
     // Planner infomation
     Eigen::Vector2d goal_pos;
