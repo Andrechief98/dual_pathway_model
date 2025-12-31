@@ -84,7 +84,7 @@ class FuzzyMPCNode:
         Label(frame, text=title, width=20, anchor="w").pack(side="left")
         sliders = []
         for i in range(num):
-            s = Scale(frame, from_=0, to=max_val, resolution=0.1, orient=HORIZONTAL)
+            s = Scale(frame, from_=0, to=max_val, resolution=1, orient=HORIZONTAL)
             s.set(defaults[i])
             s.pack(side="left", fill="x", expand=True)
             sliders.append(s)

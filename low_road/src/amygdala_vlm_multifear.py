@@ -30,6 +30,9 @@ class AmygdalaNode:
         self.zeta = 0.9
         self.alpha = 0.5
 
+        # High_road influence
+        self.hr_influence = rospy.get_param("/high_road_influence", 0.5)
+
         # Data structure
         # { 
         #   'object_name': {'u_low': 0, 'u_high': 0, 'fear': 0, 'dot_fear': 0, 'last_seen': time},
@@ -137,7 +140,7 @@ class AmygdalaNode:
             u_high = state['u_high']
 
             if u_high != None:
-                u_eff = (0.4*u_low + 0.6*u_high)
+                u_eff = (1 - self.hr_influence)*u_low + self.hr_influence*u_high
                 # u_eff = u_high
             else:
                 u_eff = u_low

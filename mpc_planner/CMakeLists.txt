@@ -65,6 +65,7 @@ add_message_files(
   FILES
   mpcParameters.msg
   objectCostParameters.msg
+  mpcStatistics.msg
 )
 
 ## Generate services in the 'srv' folder

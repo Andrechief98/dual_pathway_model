@@ -8,7 +8,9 @@
     <arg name="with_virtual_walls"                                      default="false" />
     <arg name="prefix"                                                  default="" />
     <arg name="namespace"                                               default="$(arg prefix)"                                             doc="Namespace to push all topics into."/>
-    <arg name="use_warm_start"                                          default="true" />
+    <arg name="use_warm_start"                                          default="false" />
+    <arg name="penalty"                                                 default="logarithmic" />
+    <arg name="high_road_influence"                                     default="0.5" />
 
     <include file="$(find mir_gazebo)/launch/mir_empty_world.launch">
         <arg name="world_name" value= "$(find mpc_planner)/world/test_architecture_dynamic.world"/> 
@@ -23,6 +25,10 @@
 
     <!-- Nel caso in cui venga specificato un namespace -->
     <group if="$(eval namespace != '')" ns="$(arg namespace)">
+        <param name="use_warm_start"                    value="$(arg use_warm_start)" />
+        <param name="penalty"                           value="$(arg penalty)" />
+        <param name="high_road_influence"               value="$(arg high_road_influence)" />
+
         <include file="$(find mir_navigation)/launch/start_maps.launch">
             <arg name="map_file"                                                                        value="$(arg map_file)" />
             <arg name="virtual_walls_map_file"                                                          value="$(arg virtual_walls_map_file)" />
@@ -31,6 +37,7 @@
 
         <node pkg="move_base" type="move_base" respawn="false" name="move_base_node" output="screen" clear_params="true">
             <param name="use_warm_start" value="$(arg use_warm_start)" />
+            <param name="penalty" value="$(arg penalty)" />
             <param name="SBPLLatticePlanner/primitive_filename"                                                 value="$(find mir_navigation)/mprim/unicycle_highcost_5cm.mprim" />
             <rosparam file="$(find mir_navigation)/config/move_base_common_params.yaml"                         command="load" />
             <rosparam file="$(find mir_navigation)/config/sbpl_global_params.yaml"                              command="load" />
@@ -56,6 +63,10 @@
 
     <!-- Nel caso in cui non venga specificato un namespace -->
     <group unless="$(eval namespace != '')">
+        <param name="use_warm_start"                    value="$(arg use_warm_start)" />
+        <param name="penalty"                           value="$(arg penalty)" />
+        <param name="high_road_influence"               value="$(arg high_road_influence)" />
+
         <include file="$(find mir_navigation)/launch/start_maps.launch">
             <arg name="map_file" value="$(arg map_file)" />
             <arg name="virtual_walls_map_file" value="$(arg virtual_walls_map_file)" />
@@ -63,7 +74,6 @@
         </include>
 
         <node pkg="move_base" type="move_base" respawn="false" name="move_base_node" output="screen" clear_params="true">
-            <param name="use_warm_start" value="$(arg use_warm_start)" />
             <param name="SBPLLatticePlanner/primitive_filename"                                                 value="$(find mir_navigation)/mprim/unicycle_highcost_5cm.mprim" />
             <rosparam file="$(find mir_navigation)/config/move_base_common_params.yaml"                         command="load" />
             <rosparam file="$(find mir_navigation)/config/sbpl_global_params.yaml"                              command="load" />

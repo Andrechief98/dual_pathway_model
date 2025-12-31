@@ -20,22 +20,23 @@ class Node:
         with open(yaml_path, 'r') as f:
             data = yaml.safe_load(f)
 
+        penalty = rospy.get_param("penalty")
         self.msg = mpcParameters()
-        self.msg.Q = data["mpc_planner"]['Q_weights']
-        self.msg.R = data["mpc_planner"]['R_weights']
-        self.msg.P = data["mpc_planner"]['P_weights']
+        self.msg.Q = data["mpc_planner"][penalty]['Q_weights']
+        self.msg.R = data["mpc_planner"][penalty]['R_weights']
+        self.msg.P = data["mpc_planner"][penalty]['P_weights']
 
         object_msg = objectCostParameters()
         object_msg.objectName = "none"
-        object_msg.alfa = data["mpc_planner"]["alfa"][0]
-        object_msg.beta = data["mpc_planner"]["beta"][0]
+        object_msg.alfa = data["mpc_planner"][penalty]["alfa"][0]
+        object_msg.beta = data["mpc_planner"][penalty]["beta"][0]
 
         self.msg.objectsList.append(object_msg)
 
         self.fuzzy_params = {
             "low":    {"alfa": 1, "beta": 0.1},
-            "medium": {"alfa": 10.0, "beta": 0.05},
-            "high":   {"alfa": 20.0, "beta": 0.01},
+            "medium": {"alfa": 100.0, "beta": 0.05},
+            "high":   {"alfa": 200.0, "beta": 0.01},
         }
 
         # --- Setup ROS ---

@@ -21,7 +21,7 @@
     </light>
 
 
-    <model name="cylinder">
+    <!-- <model name="cylinder">
       <static>true</static>
       <pose> 4.5 -1.5 0 0 0 0 </pose>      
       <link name="cylinder_link">
@@ -38,7 +38,13 @@
           </material>
         </visual>  
       </link>
-    </model>
+    </model> -->
+
+    <include>
+      <uri>model://cardboard_box</uri>
+      <name>cardboard_box</name>
+      <pose>4.5 -1.5 0.1 0 0 -0.785</pose> 
+    </include>
 
     <include>
       <uri>model://mars_rover</uri>

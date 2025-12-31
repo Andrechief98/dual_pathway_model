@@ -24,6 +24,7 @@
 #include <gazebo_msgs/ModelStates.h>
 #include <mpc_planner/classes.h>
 #include "mpc_planner/mpcParameters.h"
+#include "mpc_planner/mpcStatistics.h"
 
 
 
@@ -123,6 +124,8 @@ namespace mpc_planner {
                 + Rw * wk * wk;
 
             // Obstacle avoidance
+            cs::MX obstacle_penalty = 0;
+
             for(int j=0; j<N_obs; j++){
 
                 cs::MX alfa_j = alfa_vec(j);
@@ -142,9 +145,13 @@ namespace mpc_planner {
 
                 distance = cs::MX::fmax(distance, 0.001);
 
-                // Penalty logaritmico
-                cs::MX obstacle_penalty = -alfa_j * cs::MX::log(beta_j * distance); //alfa/(0.05*(distance * distance))
-
+                if (penalty=="logarithmic"){
+                    // Penalty logaritmico
+                    obstacle_penalty = -alfa_j * cs::MX::log(beta_j * distance); 
+                }
+                else if (penalty == "square"){
+                    obstacle_penalty = alfa_j - beta_j*(distance * distance);
+                }
                 // Aggiunta costo ostacolo
                 J = J + obstacle_penalty;
             }
@@ -172,7 +179,7 @@ namespace mpc_planner {
             + terminal_slack_penalty * s * s;
 
         // Cost for obstacle slack variables
-        double slack_penalty = 1e5;
+        double slack_penalty = 1e8;
 
         // Somma dei quadrati di tutti gli s_obs
         for (int idx = 0; idx < ns_obs; ++idx) {
@@ -393,6 +400,7 @@ namespace mpc_planner {
         opts["print_time"] = 0;
         opts["ipopt.tol"] = 1e-3;
         opts["ipopt.max_iter"] = 100;
+        // opts["record_time"] = true;
 
         solver_ = nlpsol("solver", "ipopt", nlp, opts);
 
@@ -431,12 +439,20 @@ namespace mpc_planner {
                 use_warm_start = true;
             }
 
+            if (nh_.getParam("/penalty", penalty)) {
+                ROS_INFO("MPC: 'penalty' parameter found: %s", penalty.c_str());
+            } else {
+                ROS_WARN("MPC: parameter 'penalty' NOT found in %s! Using default value: logarithmic", nh_.getNamespace().c_str());
+                penalty = "logarithmic";
+            }
+
             sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
             sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &MpcPlanner::obstacleGazeboCallback, this);
             sub_mpc_params = nh_.subscribe<mpcParameters>("/mpc/params",1, &MpcPlanner::paramsCallback, this);
             pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
             pub_optimal_traj = nh_.advertise<nav_msgs::Path>("/move_base/TrajectoryPlannerROS/local_plan", 1);
             pub_ref_posearray = nh_.advertise<geometry_msgs::PoseArray>("/pose_array",1);
+            // pub_mpc_stats = nh_.advertise<mpc_planner::mpcStatistics>("/mpc/statistics",1);
 
             clearCostmap_service_client = nh_.serviceClient<std_srvs::Empty>("/move_base_node/clear_costmaps");
 
@@ -457,7 +473,7 @@ namespace mpc_planner {
         N_cost_params = 0;
         XmlRpc::XmlRpcValue q_list, r_list, p_list, alfa_list, beta_list;
 
-        if (nh_.getParam("/mpc_planner/Q_weights", q_list)) {
+        if (nh_.getParam("/mpc_planner/" + penalty + "/Q_weights", q_list)) {
             int Q_size = q_list.size();
 
             if (Q_size != 3) {
@@ -484,7 +500,7 @@ namespace mpc_planner {
             ROS_ERROR("Error loading Q matrix weights");
         }
 
-        if (nh_.getParam("/mpc_planner/R_weights", r_list)) {
+        if (nh_.getParam("/mpc_planner/" + penalty + "/R_weights", r_list)) {
 
             int R_size = r_list.size();
             if (R_size != 2) {
@@ -508,7 +524,7 @@ namespace mpc_planner {
         }
 
 
-        if (nh_.getParam("/mpc_planner/P_weights", p_list)) {
+        if (nh_.getParam("/mpc_planner/" + penalty + "/P_weights", p_list)) {
 
             int P_size = p_list.size();
             if (P_size != 3) {
@@ -532,7 +548,7 @@ namespace mpc_planner {
         }
 
 
-        if (nh_.getParam("/mpc_planner/alfa", alfa_list)) {
+        if (nh_.getParam("/mpc_planner/" + penalty + "/alfa", alfa_list)) {
 
             int yaml_size = alfa_list.size();
     
@@ -575,7 +591,7 @@ namespace mpc_planner {
         
 
 
-        if (nh_.getParam("/mpc_planner/beta", beta_list)) {
+        if (nh_.getParam("/mpc_planner/" + penalty + "/beta", beta_list)) {
             int yaml_size = beta_list.size();
             
             int dimensione_finale;
@@ -1085,7 +1101,51 @@ namespace mpc_planner {
                 }
                 
                 auto stats = solver_.stats();
+                
+
+                // DEBUG MPC STATUS:
+                // std::cout << "\n===== DEBUG MPC STATS =====" << std::endl;
+                // std::cout << "Numero totale di chiavi: " << stats.size() << std::endl;
+
+                // for (auto it = stats.begin(); it != stats.end(); ++it) {
+                //     std::string key = it->first;
+                //     auto& val = it->second;
+                    
+                //     // Determiniamo il tipo per evitare i mismatch futuri
+                //     std::string type_str = "unknown";
+                //     if (val.is_double()) type_str = "double";
+                //     else if (val.is_int())    type_str = "int";
+                //     else if (val.is_string()) type_str = "string";
+                //     else if (val.is_bool())   type_str = "bool";
+
+                //     // Stampiamo in formato tabellare
+                //     std::cout << "Chiave: " << std::left << std::setw(20) << key 
+                //             << " | Tipo: " << std::setw(8) << type_str 
+                //             << " | Valore: " << val << std::endl;
+                // }
+                // std::cout << "===========================\n" << std::endl;
+                
+
                 std::string status = static_cast<std::string>(stats["return_status"]);
+
+                // publishing mpc statistics
+                // mpc_planner::mpcStatistics stats_msg;
+                
+
+                // // "t_wall_total" è il tempo totale (in secondi) dall'inizio alla fine della chiamata
+                // stats_msg.total_wall_time = stats.at("t_wall_total").to_double();
+                // stats_msg.total_process_time = stats.at("t_proc_total").to_double();
+
+                // // Estrazione iterazioni
+                // stats_msg.iterations = static_cast<int>(stats["iter_count"]);
+                // // stats_msg.status = status;
+
+                // // Pubblica
+                // pub_mpc_stats.publish(stats_msg);
+
+
+
+
 
                 if (status == "Solve_Succeeded" || status == "Feasible_Point_Found" || status == "Maximum_Iterations_Exceeded") {
 
@@ -1152,7 +1212,16 @@ namespace mpc_planner {
                             double dy = y - fut_obs_y;
                             double distance = std::sqrt(dx*dx + dy*dy);
 
-                            obstacle_cost += -alfa_j * std::log(beta_j * distance); //alfa/(0.05*(distance * distance));
+
+                            
+                            if (penalty == "logarithmic"){
+                                // Logarithmic penalty
+                                obstacle_cost += -alfa_j * std::log(beta_j * distance);
+                            }
+                            else if (penalty == "square"){
+                                // Square penalty
+                                obstacle_cost += alfa_j - beta_j*(distance * distance);
+                            }
 
                             // std::cout << "Distance from obstacle: " << distance << std::endl;
 

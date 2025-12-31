@@ -80,10 +80,17 @@ def main():
             "goal": (0.0, 2.0),
             "max_v": 0.5,
         },
+        # {
+        #     "name": "rover",
+        #     "cmd": "/rover/cmd_vel",
+        #     "odom": "/rover/odom",
+        #     "goal": (0.0, -2.0),
+        #     "max_v": 0.5,
+        # }
         {
-            "name": "rover",
-            "cmd": "/rover/cmd_vel",
-            "odom": "/rover/odom",
+            "name": "cylinder",
+            "cmd": "/cylinder/cmd_vel",
+            "odom": "/cylinder/odom",
             "goal": (0.0, -2.0),
             "max_v": 0.5,
         }

@@ -70,6 +70,7 @@ private:
     ros::Publisher pub_cmd;
     ros::Publisher pub_optimal_traj;
     ros::Publisher pub_ref_posearray;
+    ros::Publisher pub_mpc_stats;
 
     ros::ServiceClient clearCostmap_service_client;
 
@@ -94,7 +95,7 @@ private:
     std::string model = "euler";
     double robot_length = 1.6;
     double robot_width = 0.8;
-    double dt = 0.5;        // Timestep
+    double dt = 0.2;        // Timestep
     double v_max = 0.5;
     double v_min = 0.0;
     double w_max = 2;
@@ -119,6 +120,7 @@ private:
     Eigen::VectorXd beta;
 
     bool use_warm_start;
+    std::string penalty;
 
     // Planner infomation
     Eigen::Vector2d goal_pos;
