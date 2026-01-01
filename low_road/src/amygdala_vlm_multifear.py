@@ -23,7 +23,7 @@ class AmygdalaNode:
 
         # Radial velocity - Logistic function parameters
         self.v0 = 0
-        self.k = 4
+        self.k = 6
 
         # Fear dynamics parameters
         self.wn = 10
@@ -32,6 +32,8 @@ class AmygdalaNode:
 
         # High_road influence
         self.hr_influence = rospy.get_param("/high_road_influence", 0.5)
+        # print("HIGH ROAD INFLUENCE:")
+        # print(self.hr_influence)
 
         # Data structure
         # { 
@@ -73,7 +75,7 @@ class AmygdalaNode:
         # New u_low evaluation for each object
         for object_name, data in rel_thalamus_info.items():
             if "rover" in object_name or "robot" in object_name:
-                obs_r = 1 
+                obs_r = 0.6 
             else:
                 obs_r = 0.3
 

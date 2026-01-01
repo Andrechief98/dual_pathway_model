@@ -213,10 +213,16 @@ class ThalamusNode:
 
                 angle_diff = math.atan2(math.sin(angle_diff), math.cos(angle_diff))
 
+                # Distanza relativa robot-oggetto (dal punto di vista del robot)
                 relative_dist = np.array([
                     obj_pos[0] - robot_pos[0],
                     obj_pos[1] - robot_pos[1]
                 ])
+
+                # Distanza relativa robot-oggetto (dal punto di vista dell'oggetto)
+                relative_dist_obj = -relative_dist
+
+
 
                 dist_norm = round(np.linalg.norm(relative_dist),3)
 
@@ -232,20 +238,30 @@ class ThalamusNode:
                 if dist_norm < 1e-3: 
                     dist_norm = 1e-3
 
-                # Velocità radiale = proiezione scalare
-                v_rad = round(np.dot(obj_lin_vel, relative_dist)/dist_norm,3)
-                # print(f"Obstacle radial velocity: {v_rad}")
+                # Velocità radiale dell'oggetto (verso il robot)
+                v_rad_obj = round(np.dot(obj_lin_vel, relative_dist_obj)/dist_norm,3)
+
+                # Velocità radiale del robot (verso l'oggetto)
+                v_rad_rob = round(np.dot(robot_lin_vel, relative_dist)/dist_norm,3)
+
+                # Velocità radiale relativa (tra robot e oggetto)
+                v_rel_rad = v_rad_obj - v_rad_rob # se < 0 gli oggetti si avvicinano, se > 0 gli oggetti si allontanano
+
+                # print(f"Obstacle radial velocity: {v_rad_obj}")
+                # print(f"Robot radial velocity: {v_rad_rob}")
+                # print(f"Relative radial velocity: {v_rel_rad}")
+
                 
 
                 # We save the object
                 self.relative_info[name] = {
-                    "relative_dist" : dist_norm,
-                    "relative_angle" : relative_orient,
-                    "radial_vel" : v_rad,
+                    "relative_dist"     :   dist_norm,
+                    "relative_angle"    :   relative_orient,
+                    "radial_vel"        :   v_rad_obj,
                 }
 
                 if abs(angle_diff) <= math.radians(60):   # 120° Field Of View
-                    # The object is within robot's field of view
+                    # The object is within robot's field of view (needed for the VLM)
                     self.relevant_object_list.append(name)
                 
 

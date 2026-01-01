@@ -81,42 +81,6 @@ SYSTEM_PROMPT = exp_data['system_prompt']
 vlmResponse = factoryResponseModel.build_pydantic_models(exp_data['schema'])
 
 
-# class Object(BaseModel):
-#     object_id: str = Field(description = "The object ID received in the message, e.g. object_1, object_2, etc")
-#     name: str = Field(description = "The corresponding name of the identified object, e.g. person, robot, rover, cylinder, etc")
-#     # relative_distance: float
-#     # relative_angle: float
-#     spatial_context: str = Field(description="Describe the proximity and orientation (e.g., 'critically close and frontal')")
-#     action: str = Field(description= "The action that the object is doing according to visual, spatial and physical information.")
-#     reasoning: str = Field(description="Brief analysis of the object's behavior and environment.")
-#     dangerousness: float = Field(
-#         description= "Value ranging from 0 to 1 that express both intrinsic dangerousness of the object related to the type of object and what the object is doing.",
-#         ge=0.0,
-#         le=1.0
-#         )
-
-# class Object(BaseModel):
-#     name: str 
-#     visual_features: str = Field(description="Physical characteristics (eg. fragile, heavy, mobile)")
-#     temporal_analysis: str = Field(description="Comparison between time instant 't' and 't-1'. Is the object close? Has it changed trajectory? the previous dangerousness is coherent?")
-#     potential_consequence: str = Field(description="What could happen in case of collision? What could the object do saddenly and unpredictably?")
-#     previous_dangerousness: float = Field(description="Value of the risk evaluation from previous timestep.")
-#     reasoning: str = Field(description="Reasong to change the dangerousness value from previous timestep")
-#     dangerousness: float = Field(
-#         description="Final risk evalution ranging from 0 to 1. ",
-#         ge=0.0, 
-#         le=1.0
-#     )
-
-# class vlmResponse(BaseModel):
-#     # overall_safety_context: str = Field(description="Summary of the most critical threats in the scene.")
-#     objects: List[Object]
-
-
-
-    
-
-
 class VLMnode:
     def __init__(self):
 

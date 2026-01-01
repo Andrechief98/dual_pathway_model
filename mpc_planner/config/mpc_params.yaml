@@ -1,6 +1,6 @@
 mpc_planner:
   logarithmic:
-    Q_weights: [10.0, 10.0, 5.0]
+    Q_weights: [10.0, 10.0, 0.0]
     R_weights: [1.0, 10.0]
     P_weights: [30.0, 30.0, 0.0]
     alfa: [1.0]

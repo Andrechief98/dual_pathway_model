@@ -20,18 +20,10 @@
       </spot>
     </light>
 
-    <model name="cylinder">
+    <!-- <model name="cylinder">
       <static>false</static>
       <pose> 7 2.5 0 0 0 0 </pose>      
       <link name="link">
-        <!-- <inertial>
-          <mass>10.0</mass>
-          <inertia>
-            <ixx>0.90</ixx> <ixy>0</ixy> <ixz>0</ixz>
-            <iyy>0.90</iyy> <iyz>0</iyz>
-            <izz>0.45</izz>
-          </inertia>
-        </inertial> -->
 
         <visual name="cylinder_visual">
           <geometry>
@@ -64,13 +56,13 @@
         <odometryRate>20.0</odometryRate>
         <robotBaseFrame>link</robotBaseFrame> 
       </plugin>
-    </model>
+    </model> -->
 
 
     <include>
       <uri>model://person_walking</uri>
       <name>person</name>
-      <pose>7 -2.5 0.1 0 0 2.355</pose> 
+      <pose>1 2 0.1 0 0 -2.355</pose> 
       <plugin name="human_controller" filename="libgazebo_ros_planar_move.so">
         <robotNamespace>/person_walking</robotNamespace>
         <commandTopic>cmd_vel</commandTopic>
@@ -81,10 +73,10 @@
       </plugin>
     </include>
 
-    <!-- <include>
+    <include>
       <uri>model://mars_rover</uri>
       <name>rover</name>
-      <pose>7 2.5 0.1 0 0 -2.355</pose> 
+      <pose>7 2.5 0.1 0 0 0.785</pose> 
       <plugin name="human_controller" filename="libgazebo_ros_planar_move.so">
         <robotNamespace>/rover</robotNamespace>
         <commandTopic>cmd_vel</commandTopic>
@@ -93,7 +85,7 @@
         <odometryRate>20.0</odometryRate>
         <robotBaseFrame>link</robotBaseFrame> 
       </plugin>
-    </include> -->
+    </include>
 
 
     <include>

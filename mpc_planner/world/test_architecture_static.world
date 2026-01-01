@@ -46,6 +46,7 @@
       <pose>4.5 -1.5 0.1 0 0 -0.785</pose> 
     </include>
 
+
     <include>
       <uri>model://mars_rover</uri>
       <name>rover</name>
