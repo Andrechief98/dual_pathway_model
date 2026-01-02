@@ -62,7 +62,7 @@
     <include>
       <uri>model://person_walking</uri>
       <name>person</name>
-      <pose>1 2 0.1 0 0 -2.355</pose> 
+      <pose>-1 -3 0.1 0 0 -2.355</pose> 
       <plugin name="human_controller" filename="libgazebo_ros_planar_move.so">
         <robotNamespace>/person_walking</robotNamespace>
         <commandTopic>cmd_vel</commandTopic>

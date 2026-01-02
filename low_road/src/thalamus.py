@@ -219,10 +219,6 @@ class ThalamusNode:
                     obj_pos[1] - robot_pos[1]
                 ])
 
-                # Distanza relativa robot-oggetto (dal punto di vista dell'oggetto)
-                relative_dist_obj = -relative_dist
-
-
 
                 dist_norm = round(np.linalg.norm(relative_dist),3)
 
@@ -238,10 +234,10 @@ class ThalamusNode:
                 if dist_norm < 1e-3: 
                     dist_norm = 1e-3
 
-                # Velocità radiale dell'oggetto (verso il robot)
-                v_rad_obj = round(np.dot(obj_lin_vel, relative_dist_obj)/dist_norm,3)
+                # Velocità radiale dell'oggetto
+                v_rad_obj = round(np.dot(obj_lin_vel, relative_dist)/dist_norm,3)
 
-                # Velocità radiale del robot (verso l'oggetto)
+                # Velocità radiale del robot 
                 v_rad_rob = round(np.dot(robot_lin_vel, relative_dist)/dist_norm,3)
 
                 # Velocità radiale relativa (tra robot e oggetto)

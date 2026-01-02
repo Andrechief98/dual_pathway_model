@@ -101,7 +101,7 @@ class ModelMarkerVisualizerTF2:
         marker.color.r, marker.color.g, marker.color.b, marker.color.a = self.color_r, self.color_g, self.color_b, self.color_a
 
         if "rover" in name:
-            radius = 0.6
+            radius = 1.0
         else:
             radius = 0.3
             

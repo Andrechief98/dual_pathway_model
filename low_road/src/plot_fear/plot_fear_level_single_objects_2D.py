@@ -35,7 +35,7 @@ class Realtime2DColorMapPlotter:
             """For relative distance"""
             return np.exp(-((d - d_mu)**2) / (2 * d_sigma**2))
 
-        def sigmoid(v, k=4, v0=0):
+        def sigmoid(v, k=6, v0=0):
             """For radial velocity"""
             return 1.0 / (1.0 + np.exp(-k * (-v - v0)))
 
@@ -70,7 +70,7 @@ class Realtime2DColorMapPlotter:
 
     def callback_fear_dummy(self, msg):
 
-        self.fear_level = list(json.loads(msg.data).values())[1] 
+        self.fear_level = list(json.loads(msg.data).values())[0] 
 
     def callback_thalamus(self, msg):
         try:

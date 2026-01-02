@@ -32,8 +32,9 @@ class AmygdalaNode:
 
         # High_road influence
         self.hr_influence = rospy.get_param("/high_road_influence", 0.5)
-        # print("HIGH ROAD INFLUENCE:")
-        # print(self.hr_influence)
+
+        # Type of test
+        self.test = rospy.get_param("/test","")
 
         # Data structure
         # { 
@@ -75,7 +76,7 @@ class AmygdalaNode:
         # New u_low evaluation for each object
         for object_name, data in rel_thalamus_info.items():
             if "rover" in object_name or "robot" in object_name:
-                obs_r = 0.6 
+                obs_r = 1.0 
             else:
                 obs_r = 0.3
 
@@ -140,12 +141,34 @@ class AmygdalaNode:
             
             u_low = state['u_low']
             u_high = state['u_high']
+            
+            # print("TEST TYPE:")
+            # print(self.test)
 
-            if u_high != None:
-                u_eff = (1 - self.hr_influence)*u_low + self.hr_influence*u_high
-                # u_eff = u_high
-            else:
+            if self.test == "dp":
+                if u_high != None:
+                    u_eff = (1 - self.hr_influence)*u_low + self.hr_influence*u_high
+                else:
+                    u_eff = u_low
+
+            elif self.test == "hr":
+                if u_high != None:
+                    u_eff = u_high
+                else:
+                    u_eff = 0
+
+            elif self.test == "lr":
                 u_eff = u_low
+
+            else:
+                # standard MPC
+                u_eff = 0
+
+            # if u_high != None:
+            #     u_eff = (1 - self.hr_influence)*u_low + self.hr_influence*u_high
+            #     # u_eff = u_high
+            # else:
+            #     u_eff = u_low
 
             x1 = state['fear']
             x2 = state['dot_fear']

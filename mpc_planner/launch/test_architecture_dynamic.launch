@@ -11,6 +11,8 @@
     <arg name="use_warm_start"                                          default="false" />
     <arg name="penalty"                                                 default="logarithmic" />
     <arg name="high_road_influence"                                     default="0.5" />
+    <arg name="test"                                                    default="" />
+    <arg name="experiment"                                              default="dynamic" />
 
     <include file="$(find mir_gazebo)/launch/mir_empty_world.launch">
         <arg name="world_name" value= "$(find mpc_planner)/world/test_architecture_dynamic.world"/> 
@@ -28,6 +30,8 @@
         <param name="use_warm_start"                    value="$(arg use_warm_start)" />
         <param name="penalty"                           value="$(arg penalty)" />
         <param name="high_road_influence"               value="$(arg high_road_influence)" />
+        <param name="test"                              value="$(arg test)" />
+        <param name="experiment"                        value="$(arg experiment)" />
 
         <include file="$(find mir_navigation)/launch/start_maps.launch">
             <arg name="map_file"                                                                        value="$(arg map_file)" />
@@ -66,6 +70,8 @@
         <param name="use_warm_start"                    value="$(arg use_warm_start)" />
         <param name="penalty"                           value="$(arg penalty)" />
         <param name="high_road_influence"               value="$(arg high_road_influence)" />
+        <param name="test"                              value="$(arg test)" />
+        <param name="experiment"                        value="$(arg experiment)" />
 
         <include file="$(find mir_navigation)/launch/start_maps.launch">
             <arg name="map_file" value="$(arg map_file)" />

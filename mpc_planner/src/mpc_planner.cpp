@@ -702,7 +702,7 @@ namespace mpc_planner {
                         // Radius of the constraints set according to the considered obstacle:
                         std::string sub_string = "rover";
                         if (name.find(sub_string) != std::string::npos ){
-                            radius = 0.6;
+                            radius = 1.0;
                             // std::cout << "############### RADIUS: " << radius << std::endl;
                         }
 

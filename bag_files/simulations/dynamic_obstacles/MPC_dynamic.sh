@@ -5,7 +5,7 @@ DURATION=30
 
 BAG_NAME="MPC_dynamic"  
 TOPICS="/odom /fearlevel /cmd_vel /thalamus/info /gazebo/model_states /mpc/params /mpc/statistics /amygdala/lowroad/risks /amygdala/highroad/risks /odometry/filtered" 
-DEST_FOLDER="/home/ros_ws/src/dual_pathway_model/bag_files/simulations/dynamic_obstacles/warm_start"
+DEST_FOLDER="/home/ros_ws/src/dual_pathway_model/bag_files/simulations/dynamic_obstacles"
 
 MSG='{
   header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: "map"},
@@ -29,7 +29,7 @@ open_ros_window() {
 }
 
 # 1. Simulation - amygdala
-open_ros_window "SIMULATION" "roslaunch mpc_planner test_architecture_dynamic.launch use_warm_start:=true"
+open_ros_window "SIMULATION" "roslaunch mpc_planner test_architecture_dynamic.launch use_warm_start:=true test:=''"
 sleep 10
 
 # 2. Rosbag recorder
@@ -42,6 +42,7 @@ open_ros_window "OBSTACLES_CONTROLLER" "rosrun low_road controller_obstacles.py"
 sleep $DURATION
 
 echo "End of the experiement. Closing everything ..."
+
 
 # Killing all ROS processes
 docker exec $CONTAINER_NAME /bin/bash -c "source /opt/ros/noetic/setup.bash && rosnode kill -a; killall -9 rosmaster gzserver"

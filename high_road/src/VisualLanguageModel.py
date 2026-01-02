@@ -98,6 +98,8 @@ class VLMnode:
 
         self.previous_info = {}
 
+        self.experiment = rospy.get_param("/experiment", "")
+
 
     def build_prompt(self, current_info):
         current_str = json.dumps(current_info)
@@ -202,7 +204,18 @@ class VLMnode:
             print("Masked current info:")
             print(current_info)
         else:
+
+            # artifically remove the "person"
+             
             current_info = json.loads(relevant_info_msg)
+
+            if self.experiment == "dynamic":
+                name_to_remove = "person"
+                if name_to_remove in list(current_info.keys()):
+                    del current_info[name_to_remove]
+
+
+
             print("Current info:")
             print(current_info)
 

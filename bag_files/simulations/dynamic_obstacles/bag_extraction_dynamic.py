@@ -37,7 +37,7 @@ model_mapping = {
 radius_mapping = {
     "MiR"       : 0.5,
     "Cylinder"  : 0.3,
-    "Rover"     : 0.6,
+    "Rover"     : 1.0,
     "Person"    : 0.3,
     "Cardboard box" : 0.3
 }
@@ -254,7 +254,7 @@ def plot_multi_trajectory(all_data):
 
     ax.set_title("Robot Trajectories vs Dynamic Obstacles", fontsize=16, fontweight='bold')
     ax.set_xlabel('X [m]'); ax.set_ylabel('Y [m]')
-    ax.set_xlim([-1, 12]); ax.set_ylim([-5, 5])
+    ax.set_xlim([-2, 12]); ax.set_ylim([-5, 5])
     ax.set_aspect('equal')
     ax.grid(True, linestyle='--', alpha=0.6) # Grid più visibile
     ax.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=True, shadow=True)
@@ -356,8 +356,11 @@ def plot_distances(all_data):
             oy = np.interp(t, df_o['time'].to_numpy(), df_o['y'].to_numpy())
             dist = np.sqrt((rx - ox)**2 + (ry - oy)**2)
             axs[i, 0].plot(t, dist, label=f'Dist to {label}')
+            axs[i, 0].set_xlim(0, 30)
+            axs[i, 0].set_ylim(0, 10)
+            axs[i, 0].set_ylabel(f'{file_name}\n Distance [m]')
 
-        axs[i, 0].set_ylabel('Distance [m]')
+        # axs[i, 0].set_ylabel('Distance [m]')
         axs[i, 0].set_xlabel('Time [s]')
         axs[i, 0].legend()
         axs[i, 0].grid(True, alpha=0.3)

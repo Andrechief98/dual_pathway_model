@@ -77,8 +77,8 @@ def main():
             "name": "person",
             "cmd": "/person_walking/cmd_vel",
             "odom": "/person_walking/odom",
-            "goal": (5, -2.5),
-            "max_v": 1.0,
+            "goal": (6.5, 2.5),
+            "max_v": 0.8,
         },
         {
             "name": "rover",
