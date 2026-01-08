@@ -1,0 +1,7 @@
+<library path="lib/libapf_planner_lib">
+        <class name ="apf_planner/ApfPlanner" type ="apf_planner::ApfPlanner" base_class_type= "nav_core::BaseLocalPlanner">
+                <description>
+                        Simplest Plugin for BaseLocalPlanner
+                </description>
+        </class>
+</library>
