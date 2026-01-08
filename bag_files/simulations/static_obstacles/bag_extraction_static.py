@@ -190,6 +190,8 @@ def plot_multi_trajectory(all_data):
     ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
     plt.tight_layout()
     plt.show()
+
+    
 def plot_velocities(all_data):
     num_bags = len(all_data)
     fig, axs = plt.subplots(num_bags, 2, figsize=(12, 4 * num_bags), squeeze=False)
@@ -218,10 +220,13 @@ def plot_velocities(all_data):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
+
 def plot_distances(all_data):
     num_bags = len(all_data)
     fig, axs = plt.subplots(num_bags, 1, figsize=(10, 4 * num_bags), squeeze=False)
     fig.suptitle('Distances to Obstacles over Time', fontsize=16)
+
+    summary_min_distances = {}
 
     for i, (file_name, data) in enumerate(all_data.items()):
         df_path = data['robot_path']
@@ -232,9 +237,12 @@ def plot_distances(all_data):
         rx = df_path['x'].to_numpy()
         ry = df_path['y'].to_numpy()
 
+        all_min_distances_in_bag = {}
+
         for obs_label, obs_pos in obstacles.items():
             # Calcolo distanza euclidea istantanea
             dist = np.sqrt((rx - obs_pos['x'])**2 + (ry - obs_pos['y'])**2)
+            all_min_distances_in_bag[obs_label] = round(np.min(dist),3)
             
             # Soglia di sicurezza (opzionale: raggio robot + raggio ostacolo)
             # safety_limit = radius_mapping.get("MiR", 0) + radius_mapping.get(obs_label, 0)
@@ -244,6 +252,8 @@ def plot_distances(all_data):
             axs[i, 0].set_xlim(0, 30)
             axs[i, 0].set_ylim(0, 10)
 
+        summary_min_distances[file_name] = all_min_distances_in_bag
+        
         # axs[i, 0].set_title(f'Experiment: {file_name}')
         axs[i, 0].set_ylabel(f'{file_name}\n Distance [m]')
         axs[i, 0].legend(loc='upper right')
@@ -252,6 +262,11 @@ def plot_distances(all_data):
     axs[-1, 0].set_xlabel('Time [s]')
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
+
+    print("\n--- SUMMARY: MINIMUM DISTANCES PER EXPERIMENT ---")
+    for bag, val in summary_min_distances.items():
+        print(f"{bag}: {val}")
+    print("-------------------------------------------------\n")
 
 def plot_fear_comparison(all_data):
     num_bags = len(all_data)

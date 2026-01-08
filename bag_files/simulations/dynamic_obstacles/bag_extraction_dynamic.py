@@ -339,6 +339,9 @@ def plot_distances(all_data):
     """
     num_bags = len(all_data)
     fig, axs = plt.subplots(num_bags, 1, figsize=(8, 8 * num_bags), squeeze=False)
+    
+    summary_min_distances = {}
+    
     for i, (file_name, data) in enumerate(all_data.items()):
         df_r = data['robot_path']
         if df_r is None or df_r.empty:
@@ -348,6 +351,8 @@ def plot_distances(all_data):
         rx = df_r['x'].to_numpy()
         ry = df_r['y'].to_numpy()
 
+        all_min_distances_in_bag = {}
+
         for label, df_o in data['obstacle_paths'].items():
             if df_o is None or df_o.empty:
                 continue
@@ -355,10 +360,15 @@ def plot_distances(all_data):
             ox = np.interp(t, df_o['time'].to_numpy(), df_o['x'].to_numpy())
             oy = np.interp(t, df_o['time'].to_numpy(), df_o['y'].to_numpy())
             dist = np.sqrt((rx - ox)**2 + (ry - oy)**2)
+
+            all_min_distances_in_bag[label] = round(np.min(dist),3)
+
             axs[i, 0].plot(t, dist, label=f'Dist to {label}')
             axs[i, 0].set_xlim(0, 30)
             axs[i, 0].set_ylim(0, 10)
             axs[i, 0].set_ylabel(f'{file_name}\n Distance [m]')
+
+        summary_min_distances[file_name] = all_min_distances_in_bag
 
         # axs[i, 0].set_ylabel('Distance [m]')
         axs[i, 0].set_xlabel('Time [s]')
@@ -366,6 +376,11 @@ def plot_distances(all_data):
         axs[i, 0].grid(True, alpha=0.3)
     plt.subplots_adjust(hspace=0.6, top=0.95, bottom=0.05)
     plt.show()
+
+    print("\n--- SUMMARY: MINIMUM DISTANCES PER EXPERIMENT ---")
+    for bag, val in summary_min_distances.items():
+        print(f"{bag}: {val}")
+    print("-------------------------------------------------\n")
 
 def plot_fear_comparison(all_data):
     """
