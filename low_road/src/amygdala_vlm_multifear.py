@@ -3,6 +3,7 @@ import rospy
 import json
 import math
 from std_msgs.msg import String
+import numpy as np
 
 class AmygdalaNode:
     def __init__(self):
@@ -61,7 +62,7 @@ class AmygdalaNode:
         where 'Object' is:
         "name":{
             relative_dist" 
-            "relative_orient" 
+            "relative_angle" 
             "radial_vel" 
             }
         
@@ -80,7 +81,15 @@ class AmygdalaNode:
             else:
                 obs_r = 0.3
 
-            rel_dist = data["relative_dist"] - obs_r
+
+            alpha = data["relative_angle"]
+            ROBOT_SEMI_AXIS_A = 0.8  # Lunghezza (asse x locale)
+            ROBOT_SEMI_AXIS_B = 0.4  # Larghezza (asse y locale)
+            a = ROBOT_SEMI_AXIS_A
+            b = ROBOT_SEMI_AXIS_B
+            r_robot_alpha = (a * b) / np.sqrt((b * np.cos(alpha))**2 + (a * np.sin(alpha))**2)
+
+            rel_dist = data["relative_dist"] - obs_r - r_robot_alpha
             rel_rad_vel = data["radial_vel"]
 
             # Compute u_low (risk)

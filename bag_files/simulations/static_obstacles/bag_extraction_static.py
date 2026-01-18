@@ -18,6 +18,7 @@ bag_files_list = [
     "MPC_lr_static.bag", 
     "MPC_hr_static.bag", 
     "MPC_dp_static.bag",
+    "APF_static.bag"
 ] 
 
 ROBOT_SEMI_AXIS_A = 0.8  # Lunghezza (asse x locale)
@@ -39,6 +40,14 @@ radius_mapping = {
     "Rover"         : 1.0,                # Raggio rover
     "Person"        : 0.3,              # Raggio persona
     "Cardboard box" : 0.3
+}
+
+legend_mapping = {
+    "MPC_static.bag" : "MPC", 
+    "MPC_lr_static.bag": "MPC_{lr}", 
+    "MPC_hr_static.bag": "MPC_{hr}", 
+    "MPC_dp_static.bag": "MPC_{dp}",
+    "APF_static.bag" : "APF"
 }
 
 def quaternion_to_yaw(q):
@@ -133,7 +142,15 @@ def plot_multi_trajectory(all_data):
             color = cmap(i % 10)
             
             # Traiettoria
-            ax.plot(x_vals, y_vals, label=f'Path: {file_name}', color=color, linewidth=2, zorder=2)
+            label_name = legend_mapping[file_name]
+            ax.plot(
+                x_vals, 
+                y_vals, 
+                label=rf'${label_name}$',
+                color=color, 
+                linewidth=2, 
+                zorder=2
+                )
             
             # Plot Ellissi (Footprints) ogni DT_FOOTPRINT secondi
             max_t = time_vals.max()
@@ -157,7 +174,10 @@ def plot_multi_trajectory(all_data):
                 (x_vals[-1], y_vals[-1]), 
                 width=2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B, 
                 angle=yaw_vals[-1], 
-                color=color, fill=True, alpha=0.2, label=f'Robot Final {file_name}'
+                color=color, 
+                fill=True, 
+                alpha=0.2, 
+                # label=f'Robot Final {file_name}'
             )
             ax.add_patch(final_ellipse)
             ax.scatter(x_vals[-1], y_vals[-1], color=color, marker='x', s=50)
@@ -182,20 +202,136 @@ def plot_multi_trajectory(all_data):
         
         ax.text(x + 0.1, y + 0.1, label, fontsize=9, fontweight='bold')
 
-    ax.set_title('Robot Trajectories & Obstacles', fontsize=16)
-    ax.set_xlabel('X [m]')
-    ax.set_ylabel('Y [m]')
+    ax.set_title(r'$\mathrm{Robot\ Trajectories\ &\ Obstacles}$', fontsize=16)
+    ax.set_xlabel(r'$X \ [\mathrm{m}]$')
+    ax.set_ylabel(r'$Y \ [\mathrm{m}]$')
     ax.set_aspect('equal')
     ax.grid(True, linestyle='--', alpha=0.5)
-    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    ax.legend(loc='upper right', bbox_to_anchor=(0.95, 1))
     plt.tight_layout()
     plt.show()
 
+
+
+def plot_trajectory_keyframes(all_data, T_END=30, DT_FOOTSTEP=4, cols=4):
+    items_to_plot = list(all_data.items())
+    if not items_to_plot: return
+
+    checkpoint_times = np.arange(0, T_END + 1e-6, DT_FOOTSTEP)
+    num_frames = len(checkpoint_times)
+    rows = int(np.ceil(num_frames / cols))
+
+    fig, axs = plt.subplots(rows, cols, figsize=(5 * cols, 7 * rows), squeeze=False)
+    fig.suptitle(r'$\mathrm{Robot\ Trajectory\ Evolution}$', fontsize=16, y=0.98)
+
+    colors_robot = plt.cm.get_cmap('tab10').colors
+    axs_flat = axs.flatten()
     
+    # Mappatura colori specifici per gli ostacoli
+    # Assicurati che le chiavi corrispondano esattamente ai nomi nei tuoi dati
+    obs_color_map = {
+        'Person': 'skyblue',
+        'Rover': 'lightgray',
+        'Cardboard box': 'khaki'
+    }
+
+    legend_dict = {}
+
+    for j, t_val in enumerate(checkpoint_times):
+        ax = axs_flat[j]
+        
+        # --- 1. Plot Robot Paths ---
+        for i, (file_name, data) in enumerate(items_to_plot):
+            robot_color = colors_robot[i % 10]
+            df_r = data['robot_path']
+            
+            if df_r is not None and not df_r.empty:
+                times = df_r['time'].to_numpy()
+                idx_end = (np.abs(times - t_val)).argmin()
+                df_curr = df_r.iloc[:idx_end + 1]
+                
+                if not df_curr.empty:
+                    xr, yr = df_curr['x'].to_numpy(), df_curr['y'].to_numpy()
+                    line, = ax.plot(xr, yr, color=robot_color, linewidth=2.5, alpha=0.8, zorder=4)
+                    
+                    curr_pos = df_curr.iloc[-1]
+                    label_name = rf'$\mathrm{{{legend_mapping[file_name]}}}$'
+                    
+                    ell = patches.Ellipse(
+                        (curr_pos['x'], curr_pos['y']), 
+                        width=2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B,
+                        angle=curr_pos['yaw'], 
+                        color=robot_color, fill=True, alpha=0.5
+                    )
+                    ax.add_patch(ell)
+
+                    if label_name not in legend_dict:
+                        legend_dict[label_name] = line
+
+        # --- 2. Plot Ostacoli Statici con colori specifici ---
+        first_bag_data = items_to_plot[0][1]
+        obstacles_dict = first_bag_data.get('obstacles', {})
+
+        for obs_label, pos in obstacles_dict.items():
+            x_o, y_o = pos['x'], pos['y']
+            radius = radius_mapping.get(obs_label, 0.3)
+            
+            # Recupero colore specifico o default se non trovato
+            obs_color = obs_color_map.get(obs_label, 'bisque')
+            
+            # Disegno ostacolo: un unico oggetto patch per gestire bene la legenda
+            # Usiamo alpha=0.3 per il riempimento ma bordo solido
+            circle = plt.Circle(
+                (x_o, y_o), radius, 
+                facecolor=obs_color, 
+                edgecolor=obs_color, 
+                linewidth=1.5, 
+                alpha=0.8, # Alpha globale per la patch nel grafico
+                zorder=2
+            )
+            ax.add_patch(circle)
+            
+            # --- Gestione Legenda per Ostacoli (Patch + Bordo) ---
+            obs_key = rf'${obs_label}$'
+            if obs_key not in legend_dict:
+                # Creiamo un "Proxy Artist" per la legenda che mostri sia il colore che il bordo
+                legend_dict[obs_key] = patches.Patch(
+                    facecolor=obs_color, 
+                    edgecolor=obs_color, 
+                    alpha=0.6, # Leggermente più opaco per essere visibile in legenda
+                    label=obs_key
+                )
+
+        # --- 3. Formattazione Subplot ---
+        ax.set_xlabel(r'$X\ [\mathrm{m}]$', fontsize=12)
+        ax.set_ylabel(r'$Y\ [\mathrm{m}]$', fontsize=12)
+        ax.set_title(rf'$\mathbf{{t = {t_val:.1f}\ s}}$', fontsize=12, y=-0.5)
+        
+        ax.set_aspect('equal')
+        ax.set_xlim([-1.5, 11]) 
+        ax.set_ylim([-4, 4])
+        ax.grid(True, linestyle='--', alpha=0.5)
+
+    for k in range(num_frames, len(axs_flat)):
+        axs_flat[k].axis('off')
+
+    # --- 4. Legenda Globale in Basso ---
+    fig.legend(legend_dict.values(), legend_dict.keys(), 
+               loc='lower center', 
+               ncol=min(len(legend_dict), 7), 
+               fontsize='large', 
+               frameon=True, 
+               bbox_to_anchor=(0.5, 0.02))
+
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
+    fig.subplots_adjust(hspace=0.45, wspace=0.3) 
+    
+    plt.show()
+
 def plot_velocities(all_data):
     num_bags = len(all_data)
     fig, axs = plt.subplots(num_bags, 2, figsize=(12, 4 * num_bags), squeeze=False)
-    fig.suptitle('Robot Velocities (cmd_vel) for each Experiment', fontsize=16)
+    fig.suptitle('Robot Velocities', fontsize=16, family='serif')
 
     for i, (file_name, data) in enumerate(all_data.items()):
         df_vel = data['velocity']
@@ -220,11 +356,67 @@ def plot_velocities(all_data):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
+def plot_combined_velocities(all_data):
+    # Creiamo 2 subplot sovrapposti (2 righe, 1 colonna)
+    fig, (ax_lin, ax_ang) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+    fig.suptitle(r'$\mathrm{Robot\ Velocities}$', fontsize=16)
+
+    # Ciclo sui dati per aggiungere ogni linea ai due subplot
+    for file_name, data in all_data.items():
+        df_vel = data['velocity']
+        if df_vel.empty: continue
+        
+        t = df_vel['time'].to_numpy()
+        lin = df_vel['linear'].to_numpy()
+
+        # Deleting the single outlier peak
+        if file_name == "MPC_dp_static.bag":
+            # 0.09442207 0.09442207
+            lin_cleaned = lin.copy()
+    
+            # Cicliamo dal secondo elemento in poi
+            for i in range(1, len(lin_cleaned)):
+                val = lin_cleaned[i]
+                
+                # Check: se il valore è compreso tra 0 (escluso) e 0.5 (escluso)
+                if 0 < val < 0.45:
+                    # Sostituisci con il valore precedente (che a sua volta 
+                    # potrebbe essere già stato "pulito" nei passi precedenti)
+                    lin_cleaned[i] = lin_cleaned[i-1]
+            
+            lin = lin_cleaned
+        ang = df_vel['angular'].to_numpy()
+        
+        label_name = legend_mapping[file_name]
+
+        # Plot Lineare
+        ax_lin.plot(t, lin, label=rf'${label_name}$')
+        # Plot Angolare
+        ax_ang.plot(t, ang, label=rf'${label_name}$')
+
+    # Formattazione Subplot Lineare
+    ax_lin.set_ylabel(r'$v\ [\mathrm{m/s}]$', fontsize=12)
+    ax_lin.grid(True, linestyle='--', alpha=0.6)
+    ax_lin.legend(loc='upper right', fontsize='small', frameon=True)
+    ax_lin.set_xlim([0,25])
+    ax_lin.set_ylim([-0.1, 1])
+
+    # Formattazione Subplot Angolare
+    ax_ang.set_ylabel(r'$\omega\ [\mathrm{rad/s}]$', fontsize=12)
+    ax_ang.set_xlabel(r'$t\ [\mathrm{s}]$', fontsize=12)
+    ax_ang.grid(True, linestyle='--', alpha=0.6)
+    ax_ang.set_xlim([0, 25])
+    ax_ang.set_ylim([-2, 2])
+    # Se la legenda è identica, possiamo metterla solo nel primo o in entrambi
+    ax_ang.legend(loc='upper right', fontsize='small', frameon=True)
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
 
 def plot_distances(all_data):
     num_bags = len(all_data)
     fig, axs = plt.subplots(num_bags, 1, figsize=(10, 4 * num_bags), squeeze=False)
-    fig.suptitle('Distances to Obstacles over Time', fontsize=16)
+    fig.suptitle(r'$\mathrm{Distances\ from\ Obstacles}$', fontsize=16)
 
     summary_min_distances = {}
 
@@ -247,7 +439,7 @@ def plot_distances(all_data):
             # Soglia di sicurezza (opzionale: raggio robot + raggio ostacolo)
             # safety_limit = radius_mapping.get("MiR", 0) + radius_mapping.get(obs_label, 0)
             
-            line, = axs[i, 0].plot(t, dist, label=f'Dist to {obs_label}')
+            line, = axs[i, 0].plot(t, dist, label=f'{obs_label}')
             # axs[i, 0].axhline(y=safety_limit, color=line.get_color(), linestyle='--', alpha=0.3)
             axs[i, 0].set_xlim(0, 30)
             axs[i, 0].set_ylim(0, 10)
@@ -268,15 +460,162 @@ def plot_distances(all_data):
         print(f"{bag}: {val}")
     print("-------------------------------------------------\n")
 
+
+# def plot_distances_by_obstacle(all_data):
+#     sample_bag = next(iter(all_data.values()))
+#     obstacle_labels = list(sample_bag['obstacles'].keys())
+    
+#     fig, axs = plt.subplots(len(obstacle_labels), 1, figsize=(10, 5 * len(obstacle_labels)), squeeze=False)
+#     fig.suptitle(r'$\mathrm{Distances\ to\ Obstacles}$', fontsize=18)
+
+#     # Dizionario per i risultati minimi (opzionale)
+#     summary_min_distances = {obs: {} for obs in obstacle_labels}
+
+#     for j, obs_label in enumerate(obstacle_labels):
+#         ax = axs[j, 0]
+        
+#         # Cicliamo su tutti gli esperimenti (bag) per questo specifico ostacolo
+#         for file_name, data in all_data.items():
+#             df_path = data['robot_path']
+#             obstacles = data['obstacles']
+            
+#             if df_path.empty or obs_label not in obstacles:
+#                 continue
+
+#             t = df_path['time'].to_numpy()
+#             rx = df_path['x'].to_numpy()
+#             ry = df_path['y'].to_numpy()
+#             obs_pos = obstacles[obs_label]
+
+#             radius = radius_mapping[obs_label]
+
+#             # Calcolo distanza euclidea istantanea
+#             # Formula: d = sqrt((x_r - x_o)^2 + (y_r - y_o)^2)
+#             dist = np.sqrt((rx - obs_pos['x'])**2 + (ry - obs_pos['y'])**2) - radius
+            
+#             # Salvataggio distanza minima per il riepilogo
+#             summary_min_distances[obs_label][file_name] = round(np.min(dist), 3)
+
+#             # Pulizia nome file per LaTeX
+#             label_name = legend_mapping[file_name]
+            
+#             # Plot dell'esperimento nel subplot dell'ostacolo corrente
+#             ax.plot(t, dist, label=rf'$\mathrm{{{label_name}}}$')
+
+#         # Formattazione del subplot
+#         clean_obs_label = obs_label.replace('_', r'\_')
+#         ax.set_title(rf'${clean_obs_label}$', fontsize=14)
+#         ax.set_ylabel(r'$d\ [\mathrm{m}]$', fontsize=12)
+#         ax.set_xlim(0, 30)
+#         ax.set_ylim(0, 10)
+#         ax.grid(True, linestyle='--', alpha=0.5)
+        
+#         # Legenda interna in alto a destra
+#         ax.legend(loc='upper right', fontsize=9, ncol=1)
+
+#     # Etichetta asse X solo sull'ultimo subplot
+#     axs[-1, 0].set_xlabel(r'$t\ [\mathrm{s}]$', fontsize=12)
+
+#     plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+#     fig.subplots_adjust(hspace=0.4) # Aggiunge spazio verticale per non sovrapporre i titoli
+#     plt.show()
+
+#     # Stampa del riepilogo
+#     print("\n--- SUMMARY: MINIMUM DISTANCES PER OBSTACLE ---")
+#     for obs, experiments in summary_min_distances.items():
+#         print(f"\nObstacle: {obs}")
+#         for bag, d_min in experiments.items():
+#             print(f"  - {bag}: {d_min} m")
+
+
+
+def plot_distances_by_obstacle(all_data):
+    sample_bag = next(iter(all_data.values()))
+    obstacle_labels = list(sample_bag['obstacles'].keys())
+    
+    # Ridotto a 3 per coerenza con le dimensioni precedenti
+    fig, axs = plt.subplots(len(obstacle_labels), 1, figsize=(10, 3 * len(obstacle_labels)), squeeze=False)
+    fig.suptitle(r'$\mathrm{Obstacles\ distances}$', fontsize=18)
+
+    summary_min_distances = {obs: {} for obs in obstacle_labels}
+
+    for j, obs_label in enumerate(obstacle_labels):
+        ax = axs[j, 0]
+        
+        for file_name, data in all_data.items():
+            df_path = data['robot_path']
+            obstacles = data['obstacles']
+            
+            if df_path.empty or obs_label not in obstacles:
+                continue
+
+            # Dati robot
+            t = df_path['time'].to_numpy()
+            rx, ry = df_path['x'].to_numpy(), df_path['y'].to_numpy()
+            # Assumiamo yaw in gradi (come indicato precedentemente), lo convertiamo in radianti per le funzioni trig
+            ryaw = np.radians(df_path['yaw'].to_numpy()) 
+
+            # Dati ostacolo
+            obs_pos = obstacles[obs_label]
+            radius_obs = radius_mapping[obs_label]
+
+            # 1. Vettore relativo (Centro Robot -> Centro Ostacolo)
+            dx = obs_pos['x'] - rx
+            dy = obs_pos['y'] - ry
+            dist_centers = np.sqrt(dx**2 + dy**2)
+
+            # 2. Angolo dell'ostacolo nel sistema globale
+            phi = np.arctan2(dy, dx)
+
+            # 3. Angolo dell'ostacolo relativo al frame del robot
+            alpha = phi - ryaw
+
+            # 4. Calcolo raggio variabile dell'ellisse (Robot) in direzione alpha
+            a = ROBOT_SEMI_AXIS_A
+            b = ROBOT_SEMI_AXIS_B
+            r_robot_alpha = (a * b) / np.sqrt((b * np.cos(alpha))**2 + (a * np.sin(alpha))**2)
+
+            # 5. Distanza effettiva: Centro-Centro - Raggio_Ostacolo - Raggio_Robot(alpha)
+            dist_effective = dist_centers - radius_obs - r_robot_alpha
+            
+            summary_min_distances[obs_label][file_name] = round(np.min(dist_effective), 3)
+            label_name = legend_mapping[file_name]
+            
+            ax.plot(t, dist_effective, label=rf'$\mathrm{{{label_name}}}$')
+
+        # Formattazione
+        clean_obs_label = obs_label.replace('_', r'\_')
+        ax.set_title(rf'${clean_obs_label}$', fontsize=14)
+        ax.set_ylabel(r'$d\ [\mathrm{m}]$', fontsize=12)
+        ax.set_xlim(0, 30)
+        ax.set_ylim(0, 8) # Ridotto a 5m per vedere meglio il dettaglio vicino agli ostacoli
+        ax.grid(True, linestyle='--', alpha=0.5)
+        ax.legend(loc='upper right', fontsize='small', ncol=1)
+
+    axs[-1, 0].set_xlabel(r'$t\ [\mathrm{s}]$', fontsize=12)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+    fig.subplots_adjust(hspace=0.4)
+    plt.show()
+
+    # Riepilogo a terminale
+    print("\n--- SUMMARY: MINIMUM EFFECTIVE DISTANCES (Edge-to-Edge) ---")
+    for obs, experiments in summary_min_distances.items():
+        print(f"\nObstacle: {obs}")
+        for bag, d_min in experiments.items():
+            print(f"  - {bag}: {d_min} m")
+
 def plot_fear_comparison(all_data):
-    num_bags = len(all_data)
+    # Saltiamo il primo elemento come richiesto
+    items_to_plot = list(all_data.items())[1:]
+    num_bags = len(items_to_plot)
+    
     if num_bags == 0: return
 
-    # Creiamo un subplot per ogni bag file
+    # Usiamo il numero corretto di bags per non avere subplot vuoti
     fig, axs = plt.subplots(num_bags, 1, figsize=(12, 5 * num_bags), squeeze=False)
-    fig.suptitle('Fear Levels Analysis across Experiments', fontsize=18, fontweight='bold')
+    fig.suptitle(r'$\mathrm{Fear\ Levels}$', fontsize=18)
 
-    for i, (file_name, data) in enumerate(all_data.items()):
+    for i, (file_name, data) in enumerate(items_to_plot):
         ax = axs[i, 0]
         fear_data = data['fear_levels']
         
@@ -284,22 +623,27 @@ def plot_fear_comparison(all_data):
             ax.text(0.5, 0.5, "No fear data found", ha='center')
             continue
 
-        # Plot di ogni ostacolo nel subplot del bag corrente
         for label, df in fear_data.items():
             if not df.empty:
-                # FIX: .to_numpy() per evitare problemi di indexing
                 ax.plot(df['time'].to_numpy(), df['value'].to_numpy(), 
-                        label=f'Fear: {label}', linewidth=2)
-
-        ax.set_title(f'Experiment: {file_name}', loc='left', fontsize=14)
-        ax.set_ylabel('Fear Level [0-1]')
+                        label=rf'${label}$', linewidth=2)
+                
+        label_name = legend_mapping[file_name]
+        ax.set_title(rf'${label_name}$', loc='center', fontsize=14)
+        ax.set_ylabel(rf'$F_t$')
         ax.set_ylim(-0.05, 1.05)
         ax.grid(True, linestyle=':', alpha=0.7)
-        ax.legend(loc='upper right', title="Obstacles")
+        ax.legend(loc='upper right')
 
-    axs[-1, 0].set_xlabel('Time [s]')
+    axs[-1, 0].set_xlabel(r'$t\ [\mathrm{s}]$')
+
+    # --- AGGIUNTA DELLO SPAZIO ---
+    # hspace definisce lo spazio verticale tra i subplot (0.1 è il default, prova 0.3 o 0.4)
     plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+    fig.subplots_adjust(hspace=0.4) 
+    
     plt.show()
+
 
 if __name__ == "__main__":
     all_experiments_results = {}
@@ -312,6 +656,10 @@ if __name__ == "__main__":
 
     if all_experiments_results:
         plot_multi_trajectory(all_experiments_results)
-        plot_velocities(all_experiments_results)        
-        plot_distances(all_experiments_results)
+        plot_trajectory_keyframes(all_data=all_experiments_results)
+        # plot_velocities(all_experiments_results)        
+        plot_combined_velocities(all_experiments_results)
+        # plot_distances(all_experiments_results)
+        plot_distances_by_obstacle(all_experiments_results)
         plot_fear_comparison(all_experiments_results)
+        # plot_fear_phase_space(all_experiments_results)

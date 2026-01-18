@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CONTAINER_NAME="andrea_docker-ros1_noetic-1"
-DURATION=30
+DURATION=40
 
 BAG_NAME="APF_static"  
 TOPICS="/odom /cmd_vel /gazebo/model_states /odometry/filtered" 
@@ -29,7 +29,7 @@ open_ros_window() {
 }
 
 # 1. Simulation
-open_ros_window "SIMULATION" "roslaunch mpc_planner test_architecture_static.launch use_warm_start:=true test:=''"
+open_ros_window "SIMULATION" "roslaunch apf_planner test_architecture_static.launch"
 sleep 10
 
 # 2. Rosbag recorder
