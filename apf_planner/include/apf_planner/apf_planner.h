@@ -143,7 +143,7 @@ private:
 
     // Callback functions
     void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
-    void obstacleGazeboCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
+    void obstacleOptitrackerCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
 
     };
 };

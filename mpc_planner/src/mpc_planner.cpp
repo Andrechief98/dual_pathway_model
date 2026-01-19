@@ -424,7 +424,8 @@ namespace mpc_planner {
 
             std::string tf_prefix="";
             nh_.getParam("tf_prefix", tf_prefix); 
-
+            
+            
             if (tf_prefix==""){
                 odom_frame =  "odom";
             }
@@ -444,6 +445,21 @@ namespace mpc_planner {
             } else {
                 ROS_WARN("MPC: parameter 'penalty' NOT found in %s! Using default value: logarithmic", nh_.getNamespace().c_str());
                 penalty = "logarithmic";
+            }
+
+            
+            if (nh_.getParam("/robot_size/length" , robot_length)) {
+                ROS_INFO("MPC: '/robot_size/length' parameter found: %f", robot_length);
+            } else {
+                ROS_WARN("MPC: parameter '/robot_size/length' NOT found in %s! Using default value: 1.6", nh_.getNamespace().c_str());
+                robot_length = 1.6;
+            }
+
+            if (nh_.getParam("/robot_size/width" , robot_width)) {
+                ROS_INFO("MPC: '/robot_size/width' parameter found: %f", robot_width);
+            } else {
+                ROS_WARN("MPC: parameter '/robot_size/width' NOT found in %s! Using default value: 0.8", nh_.getNamespace().c_str());
+                robot_width = 0.8;
             }
 
             sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
@@ -811,12 +827,6 @@ namespace mpc_planner {
 
 
     bool MpcPlanner::setPlan(const std::vector<geometry_msgs::PoseStamped>& orig_global_plan) {
-
-        /*
-            Funzione già presente di default. Viene eseguita:
-                - la prima volta quando viene dato il goal;
-                - successivamente con la "planner frequency" specificata nel file move_base_params.yaml (interbotix_xslocobot_nav/config)
-        */
         
         if(!initialized_)
         {

@@ -30,6 +30,23 @@ class ModelMarkerVisualizerTF2:
         self.line_thickness = 0.03
         self.num_points = 60
 
+        # Check for length
+        if rospy.has_param("/robot_size/length"):
+            self.robot_length = rospy.get_param("/robot_size/length")
+            rospy.loginfo(f"MPC: '/robot_size/length' found: {self.robot_length}")
+        else:
+            self.robot_length = 1.6
+            rospy.logwarn(f"MPC: '/robot_size/length' NOT found! Using default: {self.robot_length}")
+
+        # Check for width
+        if rospy.has_param("/robot_size/width"):
+            self.robot_width = rospy.get_param("/robot_size/width")
+            rospy.loginfo(f"MPC: '/robot_size/width' found: {self.robot_width}")
+        else:
+            self.robot_width = 0.8
+            rospy.logwarn(f"MPC: '/robot_size/width' NOT found! Using default: {self.robot_width}")
+
+
         rospy.loginfo("Model Marker Visualizer.")
         rospy.spin()
 
@@ -125,7 +142,8 @@ class ModelMarkerVisualizerTF2:
         marker.scale.x = self.line_thickness
         marker.color.r, marker.color.g, marker.color.b, marker.color.a = self.color_r, self.color_g, self.color_b, self.color_a
 
-        a, b = 0.8, 0.4
+        a = self.robot_length/2
+        b = self.robot_width/2
         for i in range(self.num_points + 1):
             theta = 2 * math.pi * i / self.num_points
             p = Point(x=a * math.cos(theta), y=b * math.sin(theta), z=0.05)

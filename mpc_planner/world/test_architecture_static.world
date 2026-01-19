@@ -40,7 +40,7 @@
       </link>
     </model> -->
 
-    <include>
+    <!-- <include>
       <uri>model://cardboard_box</uri>
       <name>cardboard_box</name>
       <pose>4.5 -1.5 0.1 0 0 -0.785</pose> 
@@ -51,7 +51,7 @@
       <uri>model://mars_rover</uri>
       <name>rover</name>
       <pose>3 1 0.1 0 0 -0.785</pose> 
-    </include>
+    </include> -->
 
     <include>
       <uri>model://walls</uri>
@@ -59,11 +59,11 @@
       <pose>4.9 0 0.1 0 0 0</pose> 
     </include>
 
-    <include>
+    <!-- <include>
       <uri>model://person_standing</uri>
       <name>person</name>
       <pose>6.7 0 0.1 0 0 -1.57</pose> 
-    </include>
+    </include> -->
 
     <model name='ground_plane'>
       <static>1</static>
