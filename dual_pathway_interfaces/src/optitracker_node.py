@@ -31,7 +31,7 @@ class OptiTrackerNode:
         
         # Publisher for the final topic
         self.model_state_pub = rospy.Publisher(
-            '/optitracker_node/model_states', 
+            '/optitracker/model_states', 
             ModelStates, 
             queue_size=1
         )
@@ -85,7 +85,7 @@ class OptiTrackerNode:
             static_tf = TransformStamped()
             static_tf.header.stamp = rospy.Time.now()
             static_tf.header.frame_id = "optitrack_world"
-            static_tf.child_frame_id = "mir_initial_pose"
+            static_tf.child_frame_id = "map"
             static_tf.transform.translation.x = msg.pose.position.x
             static_tf.transform.translation.y = msg.pose.position.y
             static_tf.transform.translation.z = msg.pose.position.z

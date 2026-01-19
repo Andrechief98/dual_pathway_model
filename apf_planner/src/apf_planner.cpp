@@ -54,7 +54,7 @@ namespace apf_planner{
             }
             
             sub_odom    =   nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &ApfPlanner::odomCallback, this);
-            sub_obs     =   nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &ApfPlanner::obstacleGazeboCallback, this);
+            sub_obs     =   nh_.subscribe<gazebo_msgs::ModelStates>("/optitracker/model_states", 1, &ApfPlanner::obstacleOptitrackerCallback, this);
             pub_cmd     =   nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
             initialized_ = true;
@@ -74,7 +74,7 @@ namespace apf_planner{
     }
 
 
-    void ApfPlanner::obstacleGazeboCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
+    void ApfPlanner::obstacleOptitrackerCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
 
         try{
             if (obstacles_list.size() != msg->name.size()-3){

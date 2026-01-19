@@ -447,7 +447,7 @@ namespace mpc_planner {
             }
 
             sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
-            sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &MpcPlanner::obstacleGazeboCallback, this);
+            sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/optitracker/model_states", 1, &MpcPlanner::obstacleOptitrackerCallback, this);
             sub_mpc_params = nh_.subscribe<mpcParameters>("/mpc/params",1, &MpcPlanner::paramsCallback, this);
             pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
             pub_optimal_traj = nh_.advertise<nav_msgs::Path>("/move_base/TrajectoryPlannerROS/local_plan", 1);
@@ -677,7 +677,7 @@ namespace mpc_planner {
         current_odom_ = *msg;
     }
 
-    void MpcPlanner::obstacleGazeboCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
+    void MpcPlanner::obstacleOptitrackerCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
         // std::cout << "Gazebo callback" << std::endl;
 
         try{
