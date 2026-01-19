@@ -446,6 +446,21 @@ namespace mpc_planner {
                 penalty = "logarithmic";
             }
 
+
+            if (nh_.getParam("/robot_size/length" , robot_length)) {
+                ROS_INFO("MPC: '/robot_size/length' parameter found: %f", robot_length);
+            } else {
+                ROS_WARN("MPC: parameter '/robot_size/length' NOT found in %s! Using default value: 1.6", nh_.getNamespace().c_str());
+                robot_length = 1.6;
+            }
+
+            if (nh_.getParam("/robot_size/width" , robot_width)) {
+                ROS_INFO("MPC: '/robot_size/width' parameter found: %f", robot_width);
+            } else {
+                ROS_WARN("MPC: parameter '/robot_size/width' NOT found in %s! Using default value: 0.8", nh_.getNamespace().c_str());
+                robot_width = 0.8;
+            }
+
             sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
             sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &MpcPlanner::obstacleGazeboCallback, this);
             sub_mpc_params = nh_.subscribe<mpcParameters>("/mpc/params",1, &MpcPlanner::paramsCallback, this);

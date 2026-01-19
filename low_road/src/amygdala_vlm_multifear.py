@@ -45,6 +45,22 @@ class AmygdalaNode:
         
         self.previous_time_instant = rospy.get_time()
 
+        # Check for length
+        if rospy.has_param("/robot_size/length"):
+            self.robot_length = rospy.get_param("/robot_size/length")
+            rospy.loginfo(f"MPC: '/robot_size/length' found: {self.robot_length}")
+        else:
+            self.robot_length = 1.6
+            rospy.logwarn(f"MPC: '/robot_size/length' NOT found! Using default: {self.robot_length}")
+
+        # Check for width
+        if rospy.has_param("/robot_size/width"):
+            self.robot_width = rospy.get_param("/robot_size/width")
+            rospy.loginfo(f"MPC: '/robot_size/width' found: {self.robot_width}")
+        else:
+            self.robot_width = 0.8
+            rospy.logwarn(f"MPC: '/robot_size/width' NOT found! Using default: {self.robot_width}")
+
     def gaussian_function(self, rel_dist):
         """Function for relative distance risk"""
         return math.exp(-0.5 * ((rel_dist - self.mu_d)/self.sigma_d)**2)
@@ -83,10 +99,8 @@ class AmygdalaNode:
 
 
             alpha = data["relative_angle"]
-            ROBOT_SEMI_AXIS_A = 0.8  # Lunghezza (asse x locale)
-            ROBOT_SEMI_AXIS_B = 0.4  # Larghezza (asse y locale)
-            a = ROBOT_SEMI_AXIS_A
-            b = ROBOT_SEMI_AXIS_B
+            a = self.robot_length/2
+            b = self.robot_width/2
             r_robot_alpha = (a * b) / np.sqrt((b * np.cos(alpha))**2 + (a * np.sin(alpha))**2)
 
             rel_dist = data["relative_dist"] - obs_r - r_robot_alpha

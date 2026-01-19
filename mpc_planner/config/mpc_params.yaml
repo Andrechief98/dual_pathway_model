@@ -12,3 +12,7 @@ mpc_planner:
     P_weights: [30.0, 30.0, 0.0]
     alfa: [0.0]
     beta: [0.0]
+
+robot_size:
+  length: 1.6 # Simulations: 1.6 m
+  width: 0.8 # Simulations: 0.8 m
