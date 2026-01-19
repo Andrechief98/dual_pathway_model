@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     ros-noetic-mir-robot \
     ros-noetic-realsense2-camera \
     ros-noetic-realsense2-description \
+    ros-noetic-vrpn-client-ros \
     python3-tk \
     build-essential \
     liblapack-dev \
