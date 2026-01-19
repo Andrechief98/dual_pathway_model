@@ -14,5 +14,5 @@ mpc_planner:
     beta: [0.0]
 
 robot_size:
-  length: 1.6
-  width: 0.8
+  length: 1.6 # Simulations: 1.6 m
+  width: 1.0 # Simulations: 0.8 m
