@@ -115,6 +115,9 @@ private:
     std::vector<double> F_rep_obs_tot   =   {0,0};
     std::vector<double> F_tot           =   {0,0};
 
+    double robot_length;
+    double robot_width;
+
     double distance_tolerance=0.2;
     double angle_tolerance=0.13;
     bool goal_reached=false;
@@ -132,7 +135,7 @@ private:
     double max_lin_acc_x=2.5;
     double max_angular_vel_z=2.0;          // da ricavare dal file config dell'interbotix
     double desired_vel = 0.5;            // valore da ricavare direttamente dal file dell'interbotix
-    double delta_t=0.2;
+    double delta_t=0.1;
 
     //APF PARAMETERS
     double alfa=0.25;                    

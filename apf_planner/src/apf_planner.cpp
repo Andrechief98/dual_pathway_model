@@ -53,6 +53,20 @@ namespace apf_planner{
                 odom_frame = tf_prefix + "/odom";
             }
             
+            if (nh_.getParam("/robot_size/length" , robot_length)) {
+                ROS_INFO("APF: '/robot_size/length' parameter found: %f", robot_length);
+            } else {
+                ROS_WARN("APF: parameter '/robot_size/length' NOT found in %s! Using default value: 1.6", nh_.getNamespace().c_str());
+                robot_length = 1.6;
+            }
+
+            if (nh_.getParam("/robot_size/width" , robot_width)) {
+                ROS_INFO("APF: '/robot_size/width' parameter found: %f", robot_width);
+            } else {
+                ROS_WARN("APF: parameter '/robot_size/width' NOT found in %s! Using default value: 0.8", nh_.getNamespace().c_str());
+                robot_width = 0.8;
+            }
+            
             sub_odom    =   nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &ApfPlanner::odomCallback, this);
             sub_obs     =   nh_.subscribe<gazebo_msgs::ModelStates>("/optitracker/model_states", 1, &ApfPlanner::obstacleOptitrackerCallback, this);
             pub_cmd     =   nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
@@ -322,19 +336,42 @@ namespace apf_planner{
             n_obs=compute_direction(curr_robot_coordinates, obstacle.coordinate);  
             F_fov=lambda+(1-lambda)*((1+compute_cos_gamma(n_robot, n_obs))/2); 
 
-            double distance = vect_norm2(curr_robot_coordinates, obstacle.coordinate) - obstacle.radius;
 
+            // 3. Calcolo dell'angolo relativo tra l'asse del robot e l'ostacolo
+            double angle_to_obs = atan2(obstacle.coordinate[1] - curr_robot_coordinates[1], 
+                                    obstacle.coordinate[0] - curr_robot_coordinates[0]);
+            double alpha = angle_to_obs - curr_robot_orientation; // Angolo relativo al corpo robot
+
+            // 4. Calcolo del raggio locale dell'ellisse (R_ell)
+            double cos_a = cos(alpha);
+            double sin_a = sin(alpha);
+
+            double a = robot_length/2;
+            double b = robot_width/2;
+
+            double r_robot_local = (a * b) / sqrt(pow(b * cos_a, 2) + pow(a * sin_a, 2));
+
+            double distance = vect_norm2(curr_robot_coordinates, obstacle.coordinate) - obstacle.radius ; //- r_robot_local;
+            std::cout << "Obstacle distance: " << distance << std::endl;
             for(int k=0; k < obstacle.F_rep_obs.size(); k++){
-                obstacle.F_rep_obs[k] = exp(1-(distance/1))*F_fov*n_obs[k];
+
+                // First possible equation:
+                obstacle.F_rep_obs[k] = exp(3-(distance/obstacle.radius))*F_fov*n_obs[k];
+
+                // Second possible equation:
+                //obstacle.F_rep_obs[k] = A*exp(-distance/B)*F_fov*n_obs[k];
+
 
                 F_rep_obs_tot[k] = F_rep_obs_tot[k] + obstacle.F_rep_obs[k];
             }
             
+            std::cout << "Obstacle repulsive force computed" << std::endl;
+            std::cout << F_rep_obs_tot[0] << " " << F_rep_obs_tot[1] << std::endl;
 
             
             }
         
-        std::cout << "Obstacle repulsive force computed" << std::endl;
+        std::cout << "Total obstacle repulsive force computed" << std::endl;
         std::cout << F_rep_obs_tot[0] << " " << F_rep_obs_tot[1] << std::endl;
 
     }
