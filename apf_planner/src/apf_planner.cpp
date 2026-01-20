@@ -52,6 +52,20 @@ namespace apf_planner{
             else{
                 odom_frame = tf_prefix + "/odom";
             }
+
+            if (nh_.getParam("/robot_size/length" , robot_length)) {
+                ROS_INFO("APF: '/robot_size/length' parameter found: %f", robot_length);
+            } else {
+                ROS_WARN("APF: parameter '/robot_size/length' NOT found in %s! Using default value: 1.6", nh_.getNamespace().c_str());
+                robot_length = 1.6;
+            }
+
+            if (nh_.getParam("/robot_size/width" , robot_width)) {
+                ROS_INFO("APF: '/robot_size/width' parameter found: %f", robot_width);
+            } else {
+                ROS_WARN("APF: parameter '/robot_size/width' NOT found in %s! Using default value: 0.8", nh_.getNamespace().c_str());
+                robot_width = 0.8;
+            }
             
             sub_odom    =   nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &ApfPlanner::odomCallback, this);
             sub_obs     =   nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &ApfPlanner::obstacleGazeboCallback, this);
@@ -337,7 +351,7 @@ namespace apf_planner{
 
             double r_robot_local = (a * b) / sqrt(pow(b * cos_a, 2) + pow(a * sin_a, 2));
 
-            double distance = vect_norm2(curr_robot_coordinates, obstacle.coordinate) - obstacle.radius - r_robot_local;
+            double distance = vect_norm2(curr_robot_coordinates, obstacle.coordinate) - obstacle.radius ; //- r_robot_local;
             std::cout << "Obstacle distance: " << distance << std::endl;
             for(int k=0; k < obstacle.F_rep_obs.size(); k++){
 

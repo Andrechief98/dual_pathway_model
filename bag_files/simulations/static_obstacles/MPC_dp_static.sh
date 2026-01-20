@@ -41,7 +41,7 @@ open_ros_window "VLM" "rosrun high_road VisualLanguageModel.py"
 sleep 10
 
 # 4. Rosbag recorder
-# open_ros_window "RECORDER" "cd $DEST_FOLDER && rosbag record -O ${BAG_NAME}.bag $TOPICS"
+open_ros_window "RECORDER" "cd $DEST_FOLDER && rosbag record -O ${BAG_NAME}.bag $TOPICS"
 
 # 5. Starting experiment (publishing robot's goal)
 open_ros_window "GOAL_PUBLISHER" "rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped '$MSG'"

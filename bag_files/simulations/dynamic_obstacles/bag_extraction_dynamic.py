@@ -23,6 +23,7 @@ bag_files_list = [
 # Parametri footprint / plotting (adattati dal primo script)
 ROBOT_SEMI_AXIS_A   = 0.8        # semiasse lungo (m) per ellisse robot
 ROBOT_SEMI_AXIS_B   = 0.4        # semiasse corto (m)
+
 DT_FOOTPRINT        = 5.0        # ogni quanti secondi disegnare la sagoma
 VELOCITY_THRESHOLD  = 0.05       # soglia per considerare in movimento (m/s)
 
@@ -564,59 +565,6 @@ def plot_radial_velocities(all_data, skip=10):
     plt.show()
 
 
-def plot_distances(all_data):
-
-    num_bags = len(all_data)
-    fig, axs = plt.subplots(num_bags, 1, figsize=(8, 8 * num_bags), squeeze=False)
-    
-    summary_min_distances = {}
-    
-    for i, (file_name, data) in enumerate(all_data.items()):
-        df_r = data['robot_path']
-        if df_r is None or df_r.empty:
-            axs[i,0].set_visible(False)
-            continue
-        t = df_r['time'].to_numpy()
-        rx = df_r['x'].to_numpy()
-        ry = df_r['y'].to_numpy()
-
-        all_min_distances_in_bag = {}
-
-        for label, df_o in data['obstacle_paths'].items():
-            if df_o is None or df_o.empty:
-                continue
-            # interpolo le coordinate dell'ostacolo sui tempi t del robot
-            ox = np.interp(t, df_o['time'].to_numpy(), df_o['x'].to_numpy())
-            oy = np.interp(t, df_o['time'].to_numpy(), df_o['y'].to_numpy())
-
-            
-            dist = np.sqrt((rx - ox)**2 + (ry - oy)**2)
-
-            all_min_distances_in_bag[label] = round(np.min(dist),3)
-
-            axs[i, 0].plot(t, dist, label=f'Dist to {label}')
-            axs[i, 0].set_xlim(0, 35)
-            axs[i, 0].set_ylim(0, 10)
-            axs[i, 0].set_ylabel(f'{file_name}\n Distance [m]')
-
-        summary_min_distances[file_name] = all_min_distances_in_bag
-
-        # axs[i, 0].set_ylabel('Distance [m]')
-        axs[i, 0].set_xlabel('Time [s]')
-        axs[i, 0].legend()
-        axs[i, 0].grid(True, alpha=0.3)
-    plt.subplots_adjust(hspace=0.6, top=0.95, bottom=0.05)
-    plt.show()
-
-    print("\n--- SUMMARY: MINIMUM DISTANCES PER EXPERIMENT ---")
-    for bag, val in summary_min_distances.items():
-        print(f"{bag}: {val}")
-    print("-------------------------------------------------\n")
-
-
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 def plot_distances_by_obstacles(all_data):
     """
@@ -760,7 +708,6 @@ if __name__ == "__main__":
         plot_trajectory_keyframes(all_data=all_experiments_results)
         # plot_velocities(all_experiments_results)
         plot_velocities_combined(all_experiments_results)
-        # plot_distances(all_experiments_results)
         plot_distances_by_obstacles(all_experiments_results)
         # plot_radial_velocities(all_experiments_results)
         plot_fear_comparison(all_experiments_results)

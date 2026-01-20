@@ -23,6 +23,7 @@ bag_files_list = [
 
 ROBOT_SEMI_AXIS_A = 0.8  # Lunghezza (asse x locale)
 ROBOT_SEMI_AXIS_B = 0.4  # Larghezza (asse y locale)
+
 DT_FOOTPRINT = 2.0       # Ogni quanti secondi disegnare la sagoma
 
 # 1. Mapping Nomi: {Nome_nel_bag: Nome_per_il_plot}
@@ -318,7 +319,7 @@ def plot_trajectory_keyframes(all_data, T_END=30, DT_FOOTSTEP=4, cols=4):
     # --- 4. Legenda Globale in Basso ---
     fig.legend(legend_dict.values(), legend_dict.keys(), 
                loc='lower center', 
-               ncol=min(len(legend_dict), 7), 
+               ncol=len(legend_dict), 
                fontsize='large', 
                frameon=True, 
                bbox_to_anchor=(0.5, 0.02))
@@ -398,14 +399,14 @@ def plot_combined_velocities(all_data):
     ax_lin.set_ylabel(r'$v\ [\mathrm{m/s}]$', fontsize=12)
     ax_lin.grid(True, linestyle='--', alpha=0.6)
     ax_lin.legend(loc='upper right', fontsize='small', frameon=True)
-    ax_lin.set_xlim([0,25])
+    ax_lin.set_xlim([0,30])
     ax_lin.set_ylim([-0.1, 1])
 
     # Formattazione Subplot Angolare
     ax_ang.set_ylabel(r'$\omega\ [\mathrm{rad/s}]$', fontsize=12)
     ax_ang.set_xlabel(r'$t\ [\mathrm{s}]$', fontsize=12)
     ax_ang.grid(True, linestyle='--', alpha=0.6)
-    ax_ang.set_xlim([0, 25])
+    ax_ang.set_xlim([0, 30])
     ax_ang.set_ylim([-2, 2])
     # Se la legenda è identica, possiamo metterla solo nel primo o in entrambi
     ax_ang.legend(loc='upper right', fontsize='small', frameon=True)
@@ -413,119 +414,6 @@ def plot_combined_velocities(all_data):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
-def plot_distances(all_data):
-    num_bags = len(all_data)
-    fig, axs = plt.subplots(num_bags, 1, figsize=(10, 4 * num_bags), squeeze=False)
-    fig.suptitle(r'$\mathrm{Distances\ from\ Obstacles}$', fontsize=16)
-
-    summary_min_distances = {}
-
-    for i, (file_name, data) in enumerate(all_data.items()):
-        df_path = data['robot_path']
-        obstacles = data['obstacles']
-        if df_path.empty or not obstacles: continue
-
-        t = df_path['time'].to_numpy()
-        rx = df_path['x'].to_numpy()
-        ry = df_path['y'].to_numpy()
-
-        all_min_distances_in_bag = {}
-
-        for obs_label, obs_pos in obstacles.items():
-            # Calcolo distanza euclidea istantanea
-            dist = np.sqrt((rx - obs_pos['x'])**2 + (ry - obs_pos['y'])**2)
-            all_min_distances_in_bag[obs_label] = round(np.min(dist),3)
-            
-            # Soglia di sicurezza (opzionale: raggio robot + raggio ostacolo)
-            # safety_limit = radius_mapping.get("MiR", 0) + radius_mapping.get(obs_label, 0)
-            
-            line, = axs[i, 0].plot(t, dist, label=f'{obs_label}')
-            # axs[i, 0].axhline(y=safety_limit, color=line.get_color(), linestyle='--', alpha=0.3)
-            axs[i, 0].set_xlim(0, 30)
-            axs[i, 0].set_ylim(0, 10)
-
-        summary_min_distances[file_name] = all_min_distances_in_bag
-        
-        # axs[i, 0].set_title(f'Experiment: {file_name}')
-        axs[i, 0].set_ylabel(f'{file_name}\n Distance [m]')
-        axs[i, 0].legend(loc='upper right')
-        axs[i, 0].grid(True, alpha=0.3)
-
-    axs[-1, 0].set_xlabel('Time [s]')
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.show()
-
-    print("\n--- SUMMARY: MINIMUM DISTANCES PER EXPERIMENT ---")
-    for bag, val in summary_min_distances.items():
-        print(f"{bag}: {val}")
-    print("-------------------------------------------------\n")
-
-
-# def plot_distances_by_obstacle(all_data):
-#     sample_bag = next(iter(all_data.values()))
-#     obstacle_labels = list(sample_bag['obstacles'].keys())
-    
-#     fig, axs = plt.subplots(len(obstacle_labels), 1, figsize=(10, 5 * len(obstacle_labels)), squeeze=False)
-#     fig.suptitle(r'$\mathrm{Distances\ to\ Obstacles}$', fontsize=18)
-
-#     # Dizionario per i risultati minimi (opzionale)
-#     summary_min_distances = {obs: {} for obs in obstacle_labels}
-
-#     for j, obs_label in enumerate(obstacle_labels):
-#         ax = axs[j, 0]
-        
-#         # Cicliamo su tutti gli esperimenti (bag) per questo specifico ostacolo
-#         for file_name, data in all_data.items():
-#             df_path = data['robot_path']
-#             obstacles = data['obstacles']
-            
-#             if df_path.empty or obs_label not in obstacles:
-#                 continue
-
-#             t = df_path['time'].to_numpy()
-#             rx = df_path['x'].to_numpy()
-#             ry = df_path['y'].to_numpy()
-#             obs_pos = obstacles[obs_label]
-
-#             radius = radius_mapping[obs_label]
-
-#             # Calcolo distanza euclidea istantanea
-#             # Formula: d = sqrt((x_r - x_o)^2 + (y_r - y_o)^2)
-#             dist = np.sqrt((rx - obs_pos['x'])**2 + (ry - obs_pos['y'])**2) - radius
-            
-#             # Salvataggio distanza minima per il riepilogo
-#             summary_min_distances[obs_label][file_name] = round(np.min(dist), 3)
-
-#             # Pulizia nome file per LaTeX
-#             label_name = legend_mapping[file_name]
-            
-#             # Plot dell'esperimento nel subplot dell'ostacolo corrente
-#             ax.plot(t, dist, label=rf'$\mathrm{{{label_name}}}$')
-
-#         # Formattazione del subplot
-#         clean_obs_label = obs_label.replace('_', r'\_')
-#         ax.set_title(rf'${clean_obs_label}$', fontsize=14)
-#         ax.set_ylabel(r'$d\ [\mathrm{m}]$', fontsize=12)
-#         ax.set_xlim(0, 30)
-#         ax.set_ylim(0, 10)
-#         ax.grid(True, linestyle='--', alpha=0.5)
-        
-#         # Legenda interna in alto a destra
-#         ax.legend(loc='upper right', fontsize=9, ncol=1)
-
-#     # Etichetta asse X solo sull'ultimo subplot
-#     axs[-1, 0].set_xlabel(r'$t\ [\mathrm{s}]$', fontsize=12)
-
-#     plt.tight_layout(rect=[0, 0.03, 1, 0.96])
-#     fig.subplots_adjust(hspace=0.4) # Aggiunge spazio verticale per non sovrapporre i titoli
-#     plt.show()
-
-#     # Stampa del riepilogo
-#     print("\n--- SUMMARY: MINIMUM DISTANCES PER OBSTACLE ---")
-#     for obs, experiments in summary_min_distances.items():
-#         print(f"\nObstacle: {obs}")
-#         for bag, d_min in experiments.items():
-#             print(f"  - {bag}: {d_min} m")
 
 
 
@@ -655,11 +543,15 @@ if __name__ == "__main__":
             if data: all_experiments_results[file_name] = data
 
     if all_experiments_results:
-        plot_multi_trajectory(all_experiments_results)
+        # plot_multi_trajectory(all_experiments_results)
+        
         plot_trajectory_keyframes(all_data=all_experiments_results)
+        
         # plot_velocities(all_experiments_results)        
+        
         plot_combined_velocities(all_experiments_results)
-        # plot_distances(all_experiments_results)
+
         plot_distances_by_obstacle(all_experiments_results)
+        
         plot_fear_comparison(all_experiments_results)
         # plot_fear_phase_space(all_experiments_results)

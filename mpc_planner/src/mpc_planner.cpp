@@ -112,7 +112,6 @@ namespace mpc_planner {
 
             // Differenza angolo wrapped
             cs::MX raw = x_r(2) - xk(2);
-            // cs::MX diff_th = cs::MX::atan2(cs::MX::sin(raw), cs::MX::cos(raw));
             cs::MX diff_th = 1.0 - cs::MX::cos(x_r(2) - xk(2));
 
             // Costo tracking
@@ -137,11 +136,30 @@ namespace mpc_planner {
                 cs::MX obs_r   = p(obs_ptr + 4);
 
 
-                // Posizione futura ostacolo
+                // Future obstacle position
                 cs::MX fut_obs_pos = obs_pos + k * dt * obs_vel;
 
+                // Vector from obstacle to robot
                 cs::MX diff = xk(cs::Slice(0,2)) - fut_obs_pos;
-                cs::MX distance = cs::MX::sqrt(cs::MX::sum1(diff*diff))- obs_r;
+
+                // Euclidean distance (center to center)
+                cs::MX distance = cs::MX::sqrt(cs::MX::sum1(diff*diff)) - obs_r;
+
+                // // Absolute angle of the vector "obstacle -> robot"
+                // cs::MX angle_to_obs = cs::MX::atan2(diff(1), diff(0));
+
+                // cs::MX phi = angle_to_obs - xk(2);
+
+                // cs::MX a = robot_length / 2.0;
+                // cs::MX b = robot_width / 2.0;
+
+                // cs::MX cos_phi = cs::MX::cos(phi);
+                // cs::MX sin_phi = cs::MX::sin(phi);
+                
+                // cs::MX robot_radius_dir = (a * b) / cs::MX::sqrt(cs::MX::pow(b * cos_phi, 2) + cs::MX::pow(a * sin_phi, 2));
+
+                // Actual distance
+                // cs::MX distance = dist_centers - obs_r; //- robot_radius_dir;
 
                 distance = cs::MX::fmax(distance, 0.001);
 

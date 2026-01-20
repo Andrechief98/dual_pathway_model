@@ -33,7 +33,7 @@ open_ros_window "SIMULATION" "roslaunch mpc_planner test_architecture_static.lau
 sleep 10
 
 # 2. Rosbag recorder
-# open_ros_window "RECORDER" "cd $DEST_FOLDER && rosbag record -O ${BAG_NAME}.bag $TOPICS"
+open_ros_window "RECORDER" "cd $DEST_FOLDER && rosbag record -O ${BAG_NAME}.bag $TOPICS"
 
 # 3. Starting experiment (publishing robot's goal)
 open_ros_window "GOAL_PUBLISHER" "rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped '$MSG'"

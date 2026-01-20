@@ -1,6 +1,6 @@
 <launch>
 
-
+    <rosparam command="load" file="$(find apf_planner)/config/apf_params.yaml" />
 
     <arg name="map_file"                                                default="$(find apf_planner)/config/maps/map_1.yaml"                         doc="Path to a map .yaml file (required)." />
     <arg name="virtual_walls_map_file"                                  default=""                                           doc="Path to a virtual walls map .yaml file (optional)." />
