@@ -694,10 +694,9 @@ namespace mpc_planner {
     }
 
     void MpcPlanner::obstacleOptitrackerCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
-        // std::cout << "Gazebo callback" << std::endl;
 
         try{
-            if (obstacles_list.size() != msg->name.size()-3){
+            if (obstacles_list.size() != msg->name.size()-1){
 
                 // necessità di ricreare il solver, qualcosa è cambiato.
 
@@ -707,7 +706,7 @@ namespace mpc_planner {
                 {
                     std::string name = msg->name[i];
                     // filtra solo gli oggetti che ti interessano
-                    if (name != "walls" && name != "ground_plane" && name != "mir")
+                    if (name != "mir")
                     {   
                         
                         // Default radius

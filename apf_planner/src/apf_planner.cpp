@@ -91,7 +91,7 @@ namespace apf_planner{
     void ApfPlanner::obstacleOptitrackerCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
 
         try{
-            if (obstacles_list.size() != msg->name.size()-3){
+            if (obstacles_list.size() != msg->name.size()-1){
 
                 // ricreo il vettore degli ostacoli
                 obstacles_list.clear();
@@ -99,7 +99,7 @@ namespace apf_planner{
                 {
                     std::string name = msg->name[i];
                     // filtra solo gli oggetti che ti interessano
-                    if (name != "walls" && name != "ground_plane" && name != "mir")
+                    if (name != "mir")
                     {   
                         
                         // Default radius
