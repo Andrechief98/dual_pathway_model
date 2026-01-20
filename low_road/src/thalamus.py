@@ -40,7 +40,7 @@ class ThalamusNode:
 
         # Subscribers
         self.odom_sub = rospy.Subscriber("/odometry/filtered", Odometry, self.odom_feedback_callback)
-        self.gazebo_sub = rospy.Subscriber("/gazebo/model_states", ModelStates, self.thalamus_info_callback)
+        self.gazebo_sub = rospy.Subscriber("/optitracker/model_states", ModelStates, self.thalamus_info_callback)
 
         # Server
         self.camera_image_server = rospy.Service('/get_camera_image', highRoadInfo, self.getCameraImage)

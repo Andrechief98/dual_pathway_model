@@ -16,7 +16,7 @@ class ModelMarkerVisualizerTF2:
         self.marker_pub = rospy.Publisher("/visualization_marker_array", MarkerArray, queue_size=1)
 
         # Subscriber a /gazebo/model_states
-        rospy.Subscriber("/gazebo/model_states", ModelStates, self.model_callback)
+        rospy.Subscriber("/optitracker/model_states", ModelStates, self.model_callback)
 
         # TF2 buffer + listener
         self.tf_buffer = tf2_ros.Buffer()
