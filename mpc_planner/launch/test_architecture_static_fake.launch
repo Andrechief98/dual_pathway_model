@@ -4,7 +4,7 @@
     <rosparam command="load" file="$(find mpc_planner)/config/mpc_params.yaml" />
 
     <arg name="prefix"                                                  default="" />
-    <arg name="namespace"                                               default=""                                             doc="Namespace to push all topics into."/>
+    <arg name="namespace"                                               default="custom"                                             doc="Namespace to push all topics into."/>
     <arg name="use_warm_start"                                          default="false" />
     <arg name="penalty"                                                 default="logarithmic"                                               doc= "possible values= 'logarithmic','square'"/>
     <arg name="high_road_influence"                                     default="0.5" />
@@ -85,13 +85,13 @@
 
     </group>
     
-    <!-- <node pkg="dual_pathway_interfaces"         type="fake_optitracker_node.py"              name="optitracker"                      output="screen" /> -->
+    <node pkg="dual_pathway_interfaces"         type="fake_optitracker_node_2.py"              name="optitracker"                      output="screen" />
     <node pkg="low_road"                        type="amygdala_vlm_multifear.py"        name="amygdala"                         output="screen" />
     <node pkg="low_road"                        type="fuzzy_mpc_params_contr.py"        name="fuzzy_mpc_params_contr_node"      output="screen" />
     <node pkg="low_road"                        type="constraints_visualization.py"     name="constraint_visualizer_rviz"       output="screen" />
     <!-- <node pkg="low_road" type="plot_fear_level.py" name="plot_fear_level" output="screen" /> -->
 
-    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find mir_navigation)/rviz/navigation.rviz" output="screen" /> -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find mir_navigation)/rviz/navigation_real_world.rviz" output="screen" />
     <!-- <node pkg="high_road" type="cerebral_cortex" name="cerebral_cortex" output="screen"/> -->
 
 

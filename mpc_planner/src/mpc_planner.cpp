@@ -1420,6 +1420,12 @@ namespace mpc_planner {
         std::cout << "Angular velocity: " << cmd_vel.angular.z  << std::endl;
         std::cout << "\n-------------------------------------------------------------------\n\n\n" << std::endl;
 
+        geometry_msgs::TwistStamped cmd_vel_stamped;
+
+        cmd_vel_stamped.header.frame_id="map";
+        cmd_vel_stamped.twist.linear.x = cmd_vel.linear.x;
+        cmd_vel_stamped.twist.angular.z = cmd_vel.angular.z;
+
         pub_cmd.publish(cmd_vel);
 
         return true;

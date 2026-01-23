@@ -7,6 +7,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2/utils.h>
 #include <nav_core/base_local_planner.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <costmap_2d/costmap_2d_ros.h>

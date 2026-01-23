@@ -53,17 +53,6 @@ class ModelMarkerVisualizerTF2:
     def model_callback(self, msg):
         marker_array = MarkerArray()
 
-        try:
-            # Ottieni la trasformazione map → odom
-            transform = self.tf_buffer.lookup_transform(
-                "map",  # target frame
-                "odom",   # source frame
-                rospy.Time(0),
-                rospy.Duration(1)
-            )
-        except Exception as e:
-            rospy.logwarn(e)
-            return
 
         for i, name in enumerate(msg.name):
             if name == "ground_plane":
@@ -73,21 +62,9 @@ class ModelMarkerVisualizerTF2:
 
             # Costruisci un punto in frame "map"
             pose_map = PoseStamped()
-            pose_map.header.frame_id = "map"
+            pose_map.header.frame_id = "odom" #map
             pose_map.header.stamp = rospy.Time.now()
             pose_map.pose = pose
-
-
-            # print(f"Point in map frame: {point_map.point.x}, {point_map.point.y}, {point_map.point.z}")
-
-            # Trasforma in frame "odom"
-            # try:
-            #     pose_odom = tf2_geometry_msgs.do_transform_pose(pose_map, transform)
-            # except Exception as e:
-            #     rospy.logwarn(f"Errore nella trasformazione per {name}: {e}")
-            #     continue
-            
-            # print(f"Point in odom frame: {point_odom.point.x}, {point_odom.point.y}, {point_odom.point.z}")
 
             # ID stabile
             marker_id = hash(name) % 10000
@@ -106,7 +83,7 @@ class ModelMarkerVisualizerTF2:
     # --- Marker helper ---
     def create_circle_marker(self, position, orientation, name, marker_id):
         marker = Marker()
-        marker.header.frame_id = "map"
+        marker.header.frame_id = "odom" #map
         marker.header.stamp = rospy.Time.now()
         marker.ns = name
         marker.id = marker_id
@@ -131,7 +108,7 @@ class ModelMarkerVisualizerTF2:
 
     def create_ellipse_marker(self, position, orientation, name, marker_id):
         marker = Marker()
-        marker.header.frame_id = "map"
+        marker.header.frame_id = "odom" #map
         marker.header.stamp = rospy.Time.now()
         marker.ns = name
         marker.id = marker_id

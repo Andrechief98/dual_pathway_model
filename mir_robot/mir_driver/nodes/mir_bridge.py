@@ -351,6 +351,7 @@ PUB_TOPICS = [
 SUB_TOPICS = [
     # really geometry_msgs.msg.TwistStamped:
     TopicConfig('cmd_vel', geometry_msgs.msg.Twist, dict_filter=_cmd_vel_dict_filter),
+    # TopicConfig('move_base_simple/goal', geometry_msgs.msg.PoseStamped),
     TopicConfig('initialpose', geometry_msgs.msg.PoseWithCovarianceStamped),
     TopicConfig('light_cmd', std_msgs.msg.String),
     TopicConfig('mir_cmd', std_msgs.msg.String),
