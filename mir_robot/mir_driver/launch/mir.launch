@@ -3,7 +3,7 @@
 
   <arg name="tf_prefix" default="" doc="TF prefix to use for all of MiR's TF frames"/>
 
-  <arg name="mir_hostname" default="192.168.12.20" /> <!--IP: 10.197.216.214-->
+  <arg name="mir_hostname" default="192.168.1.125" /> <!-- Default: 192.168.12.20-->
 
   <arg name="disable_map" default="false" doc="Disable the map topic and map -> odom TF transform from the MiR" />
 
