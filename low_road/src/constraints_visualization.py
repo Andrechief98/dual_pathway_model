@@ -115,7 +115,7 @@ class ModelMarkerVisualizerTF2:
         marker.type = Marker.LINE_STRIP
         marker.action = Marker.ADD
         marker.pose.position = position
-        marker.pose.orientation = orientation  # 👉 stessa orientazione del robot
+        marker.pose.orientation = orientation  
         marker.scale.x = self.line_thickness
         marker.color.r, marker.color.g, marker.color.b, marker.color.a = self.color_r, self.color_g, self.color_b, self.color_a
 

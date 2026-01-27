@@ -87,9 +87,12 @@
     <include file="$(find vrpn_client_ros)/launch/sample.launch">
         <arg name="server" value="192.168.1.130"/>
     </include>
-
-
+<!-- 
+    <node pkg="tf2_ros" type="static_transform_publisher" name="static_broadcaster_world_odom"
+        args="1.8431 1.6199 0.3276 0.0085 -0.0027 -0.6968 -0.7171 odom world"/> -->
+    
     <node pkg="dual_pathway_interfaces"         type="optitracker_node.py"              name="optitracker"                      output="screen" />
+    <node pkg="dual_pathway_interfaces"         type="odom_world_static_broadcaster.py" name="calibration_node"                      output="screen" />
     <node pkg="low_road"                        type="amygdala_vlm_multifear.py"        name="amygdala"                         output="screen" />
     <node pkg="low_road"                        type="fuzzy_mpc_params_contr.py"        name="fuzzy_mpc_params_contr_node"      output="screen" />
     <node pkg="low_road"                        type="constraints_visualization.py"     name="constraint_visualizer_rviz"       output="screen" />
