@@ -20,45 +20,6 @@
       </spot>
     </light>
 
-    <!-- <model name="cylinder">
-      <static>false</static>
-      <pose> 7 2.5 0 0 0 0 </pose>      
-      <link name="link">
-
-        <visual name="cylinder_visual">
-          <geometry>
-            <cylinder>
-              <radius>0.3</radius>
-              <length>1.0</length> 
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>0 0 1 1</ambient>  
-            <diffuse>0 0 1 1</diffuse>
-          </material>
-        </visual>  
-
-        <collision name="cylinder_collision">
-          <geometry>
-            <cylinder>
-              <radius>0.3</radius>
-              <length>1.0</length>
-            </cylinder>
-          </geometry>
-        </collision>
-      </link>
-
-      <plugin name="human_controller" filename="libgazebo_ros_planar_move.so">
-        <robotNamespace>/cylinder</robotNamespace>
-        <commandTopic>cmd_vel</commandTopic>
-        <odometryTopic>odom</odometryTopic>
-        <odometryFrame>odom</odometryFrame>
-        <odometryRate>20.0</odometryRate>
-        <robotBaseFrame>link</robotBaseFrame> 
-      </plugin>
-    </model> -->
-
-
     <include>
       <uri>model://person_walking</uri>
       <name>person</name>

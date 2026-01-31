@@ -47,18 +47,18 @@ class AmygdalaNode:
 
         if rospy.has_param("/robot_size/length"):
             self.robot_length = rospy.get_param("/robot_size/length")
-            rospy.loginfo(f"MPC: '/robot_size/length' found: {self.robot_length}")
+            rospy.loginfo(f"AMYGDALA: '/robot_size/length' found: {self.robot_length}")
         else:
             self.robot_length = 1.6
-            rospy.logwarn(f"MPC: '/robot_size/length' NOT found! Using default: {self.robot_length}")
+            rospy.logwarn(f"AMYGDALA: '/robot_size/length' NOT found! Using default: {self.robot_length}")
 
 
         if rospy.has_param("/robot_size/width"):
             self.robot_width = rospy.get_param("/robot_size/width")
-            rospy.loginfo(f"MPC: '/robot_size/width' found: {self.robot_width}")
+            rospy.loginfo(f"AMYGDALA: '/robot_size/width' found: {self.robot_width}")
         else:
             self.robot_width = 0.8
-            rospy.logwarn(f"MPC: '/robot_size/width' NOT found! Using default: {self.robot_width}")
+            rospy.logwarn(f"AMYGDALA: '/robot_size/width' NOT found! Using default: {self.robot_width}")
 
 
     def gaussian_function(self, rel_dist):
@@ -165,6 +165,8 @@ class AmygdalaNode:
             
             u_low = state['u_low']
             u_high = state['u_high']
+
+            
             
             # print("TEST TYPE:")
             # print(self.test)
@@ -218,8 +220,11 @@ class AmygdalaNode:
     def spin(self):
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            self.fear_dynamics()
-            rate.sleep()
+            try:
+                self.fear_dynamics()
+                rate.sleep()
+            except Exception as e:
+                rospy.logerr(e)
 
 if __name__ == "__main__":
     node = AmygdalaNode()

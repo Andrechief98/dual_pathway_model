@@ -686,36 +686,16 @@ namespace mpc_planner {
 
 
     void MpcPlanner::odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
-        // current_odom_.twist = msg->twist;
+        /*
+            Funzione di callback che viene eseguita quando il plugin si sottoscrive e riceve il messaggio di odometria.
+        */
+
         current_odom_ = *msg;
     }
 
     void MpcPlanner::obstacleOptitrackerCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
 
         try{
-
-            // Update posizione robot
-            // for (int i = 0; i < msg->name.size(); i++){
-            //     std::string name = msg->name[i];
-            //     if (name == "mir"){
-                     
-            //         current_odom_.pose.pose = msg->pose[i];
-
-            //         Print position (x, y, z)
-            //         ROS_INFO("Position -> x: [%f], y: [%f], z: [%f]", 
-            //                 current_odom_.pose.pose.position.x, 
-            //                 current_odom_.pose.pose.position.y, 
-            //                 current_odom_.pose.pose.position.z);
-
-            //         ROS_INFO("Orientation (Quat) -> x: [%f], y: [%f], z: [%f], w: [%f]",
-            //             current_odom_.pose.pose.orientation.x,
-            //             current_odom_.pose.pose.orientation.y,
-            //             current_odom_.pose.pose.orientation.z,
-            //             current_odom_.pose.pose.orientation.w);
-                    
-            //     }
-            // }
-
             if (obstacles_list.size() != msg->name.size()-1){
 
                 // necessità di ricreare il solver, qualcosa è cambiato.
@@ -726,7 +706,8 @@ namespace mpc_planner {
                 {
                     std::string name = msg->name[i];
                     // filtra solo gli oggetti che ti interessano
-                    if (name != "mir"){   
+                    if (name != "mir")
+                    {   
                         
                         // Default radius
                         double radius = 0.3;
@@ -1471,7 +1452,6 @@ namespace mpc_planner {
 
         double last_theta_ref = cur_th;
         std::cout << "Current orientation: " << last_theta_ref << std::endl;
-        std::cout << "Current position: [" << cur_x << "," << cur_y <<"]" << std::endl;
 
         // Copia Np punti a partire dal closest_idx
         geometry_msgs::PoseArray ref_pose_array;
@@ -1585,7 +1565,7 @@ namespace mpc_planner {
 
         
         ref_pose_array.header.stamp = ros::Time::now();
-        ref_pose_array.header.frame_id = "map";  
+        ref_pose_array.header.frame_id = "map";  // o il frame corretto per il tuo caso
         pub_ref_posearray.publish(ref_pose_array);
         }
 

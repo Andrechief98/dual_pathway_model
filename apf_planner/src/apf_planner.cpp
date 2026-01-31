@@ -209,10 +209,6 @@ namespace apf_planner{
     }
 
     void ApfPlanner::set_Position_Orientation_Info(){
-        /*
-            dal messaggio dell'odometria (che viene salvato in una variabile globale - robot_pose_ - tramite la funzione corrispondente di 
-            callback) vado a salvare le coordinate attuali del robot e la sua orientazione attuale (questa sarà espressa in quaternioni)
-        */
 
         curr_robot_coordinates={robot_pose_.pose.pose.position.x, robot_pose_.pose.pose.position.y}; 
         curr_robot_orientation=tf2::getYaw(robot_pose_.pose.pose.orientation); 

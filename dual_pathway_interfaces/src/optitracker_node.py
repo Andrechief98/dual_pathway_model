@@ -6,6 +6,7 @@ import tf2_geometry_msgs
 import numpy as np
 import tf.transformations as tft
 from geometry_msgs.msg import PoseStamped, Pose, Twist, TransformStamped
+from nav_msgs.msg import Odometry
 from gazebo_msgs.msg import ModelStates
 from functools import partial
 
@@ -28,31 +29,39 @@ class OptiTrackerNode:
 
         self.latest_poses = {name: Pose() for name in self.object_names}
         self.model_state_pub = rospy.Publisher('/optitracker/model_states', ModelStates, queue_size=1)
+        self.robot_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
         
         self.subscribers = []
         for name in self.object_names:
-            topic_name = f"/vrpn_client_node/{name}/pose"
-            rospy.loginfo(f"Subscribed to topic: {topic_name}")
-            
-            # The optitracker doesn't publish the name of the object. It means that, to create 
-            # the Gazebo message, we must use the name from the subscribers list. This avoid the 
-            # creation of different callbacks for each subscriber. To do it, it is possible to use 
-            # function "partial". This allow to create a function starting from a predefined one but 
-            # fixing specific parameters.
-            try:
-                sub = rospy.Subscriber(
-                    topic_name, 
-                    PoseStamped, 
-                    partial(self.pose_callback, obj_name=name),
-                )
-                print(f"Subscription to {name} done")
-            except Exception as e:
-                print(e)
-            self.subscribers.append(sub)
+            if name == "mir":
+                continue
+            else:
+                topic_name = f"/vrpn_client_node/{name}/pose"
+                rospy.loginfo(f"Subscribed to topic: {topic_name}")
+                
+                # The optitracker doesn't publish the name of the object. It means that, to create 
+                # the Gazebo message, we must use the name from the subscribers list. This avoid the 
+                # creation of different callbacks for each subscriber. To do it, it is possible to use 
+                # function "partial". This allow to create a function starting from a predefined one but 
+                # fixing specific parameters.
+                try:
+                    sub = rospy.Subscriber(
+                        topic_name, 
+                        PoseStamped, 
+                        partial(self.pose_callback, obj_name=name),
+                    )
+                    print(f"Subscription to {name} done")
+                except Exception as e:
+                    print(e)
+                self.subscribers.append(sub)
 
+
+    def odom_callback(self, msg):
+        self.latest_poses["mir"] = msg.pose.pose
 
     def pose_callback(self, msg, obj_name):
         """It updates the last pose for a specific object."""
+
         try:
             transformed_pose = self.tf_buffer.transform(msg, "odom", timeout=rospy.Duration(0.1))
             self.latest_poses[obj_name] = transformed_pose.pose
@@ -79,8 +88,9 @@ class OptiTrackerNode:
                 print(e)
 if __name__ == '__main__':
     # 'mir' must be in the list to initialize the origin
-    objects = ['mir', 'cardboard_box']
+    objects = ['mir', 'rover', 'cardboard_box', 'person']
     
+    # objects = ['mir', 'cardboard_box']
     try:
         bridge = OptiTrackerNode(objects)
         bridge.run()
