@@ -37,7 +37,7 @@ open_ros_window "THALAMUS" "rosrun low_road thalamus.py"
 sleep 5
 
 # 3. Rosbag recorder
-open_ros_window "RECORDER" "cd $DEST_FOLDER && rosbag record -O ${BAG_NAME}.bag $TOPICS"
+# open_ros_window "RECORDER" "cd $DEST_FOLDER && rosbag record -O ${BAG_NAME}.bag $TOPICS"
 
 # 4. Starting experiment (publishing robot's goal)
 open_ros_window "GOAL_PUBLISHER" "rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped '$MSG'"
