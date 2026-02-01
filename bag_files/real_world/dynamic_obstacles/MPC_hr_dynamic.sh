@@ -4,11 +4,11 @@ CONTAINER_NAME="andrea_docker-ros1_noetic-1"
 DURATION=30
 
 BAG_NAME="MPC_hr_dynamic"  
-TOPICS="/odom /fearlevel /cmd_vel /thalamus/info /gazebo/model_states /mpc/params /mpc/statistics /amygdala/lowroad/risks /amygdala/highroad/risks /odometry/filtered" 
+TOPICS="/odom /fearlevel /cmd_vel /thalamus/info /optitracker/model_states /mpc/params /mpc/statistics /amygdala/lowroad/risks /amygdala/highroad/risks /odometry/filtered" 
 DEST_FOLDER="/home/ros_ws/src/dual_pathway_model/bag_files/simulations/dynamic_obstacles"
 
 MSG='{
-  header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: "map"},
+  header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: "odom"},
   pose: {
     position: {x: 10.0, y: 0.0, z: 0.0},
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
@@ -45,7 +45,7 @@ open_ros_window "RECORDER" "cd $DEST_FOLDER && rosbag record -O ${BAG_NAME}.bag 
 
 # 5. Starting experiment (publishing robot's goal and obstacles controllers)
 open_ros_window "OBSTACLES_CONTROLLER" "rosrun low_road controller_obstacles.py"
-open_ros_window "GOAL_PUBLISHER" "rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped '$MSG'"
+open_ros_window "GOAL_PUBLISHER" "rostopic pub /custom/move_base_simple/goal geometry_msgs/PoseStamped '$MSG'"
 
 sleep $DURATION
 
@@ -54,6 +54,6 @@ echo "End of the experiement. Closing everything ..."
 # Killing all ROS processes
 docker exec $CONTAINER_NAME /bin/bash -c "source /opt/ros/noetic/setup.bash && rosnode kill -a; killall -9 rosmaster gzserver"
 
-# Killing Gazebo
+# Killing 
 pkill -9 -f gzclient
 

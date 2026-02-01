@@ -4,7 +4,7 @@ CONTAINER_NAME="andrea_docker-ros1_noetic-1"
 DURATION=30
 
 BAG_NAME="MPC_static"  
-TOPICS="/odom /fearlevel /cmd_vel /gazebo/model_states /mpc/params /mpc/statistics /amygdala/lowroad/risks /amygdala/highroad/risks /odometry/filtered" 
+TOPICS="/odom /fearlevel /cmd_vel /optitracker/model_states /mpc/params /mpc/statistics /amygdala/lowroad/risks /amygdala/highroad/risks /odometry/filtered" 
 DEST_FOLDER="/home/ros_ws/src/dual_pathway_model/bag_files/real_world/static_obstacles"
 
 MSG='{
@@ -45,6 +45,6 @@ echo "End of the experiement. Closing everything ..."
 # Killing all ROS processes
 docker exec $CONTAINER_NAME /bin/bash -c "source /opt/ros/noetic/setup.bash && rosnode kill -a; killall -9 rosmaster gzserver"
 
-# Killing Gazebo
+# Killing
 pkill -9 -f gzclient
 

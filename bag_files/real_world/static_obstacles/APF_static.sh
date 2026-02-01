@@ -4,7 +4,7 @@ CONTAINER_NAME="andrea_docker-ros1_noetic-1"
 DURATION=40
 
 BAG_NAME="APF_static"  
-TOPICS="/odom /cmd_vel /gazebo/model_states /odometry/filtered" 
+TOPICS="/odom /cmd_vel /optitracker/model_states /odometry/filtered" 
 DEST_FOLDER="/home/ros_ws/src/dual_pathway_model/bag_files/real_world/static_obstacles"
 
 MSG='{
@@ -45,6 +45,6 @@ echo "End of the experiement. Closing everything ..."
 # Killing all ROS processes
 docker exec $CONTAINER_NAME /bin/bash -c "source /opt/ros/noetic/setup.bash && rosnode kill -a; killall -9 rosmaster gzserver"
 
-# Killing Gazebo
+# Killing 
 pkill -9 -f gzclient
 
