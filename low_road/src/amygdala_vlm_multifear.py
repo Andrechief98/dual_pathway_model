@@ -99,7 +99,6 @@ class AmygdalaNode:
 
 
             alpha = data["relative_angle"]
-
             a = self.robot_length/2
             b = self.robot_width/2
             r_robot_alpha = (a * b) / np.sqrt((b * np.cos(alpha))**2 + (a * np.sin(alpha))**2)
@@ -164,9 +163,7 @@ class AmygdalaNode:
         for obj_id, state in self.tracked_objects.items():
             
             u_low = state['u_low']
-            u_high = state['u_high']
-
-            
+            u_high = state['u_high']           
             
             # print("TEST TYPE:")
             # print(self.test)

@@ -5,7 +5,7 @@ DURATION=30
 
 BAG_NAME="MPC_lr_dynamic"  
 TOPICS="/odom /fearlevel /cmd_vel /thalamus/info /optitracker/model_states /mpc/params /mpc/statistics /amygdala/lowroad/risks /amygdala/highroad/risks /odometry/filtered" 
-DEST_FOLDER="/home/ros_ws/src/dual_pathway_model/bag_files/simulations/dynamic_obstacles"
+DEST_FOLDER="/home/ros_ws/src/dual_pathway_model/bag_files/real_world/dynamic_obstacles"
 
 MSG='{
   header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: "odom"},
