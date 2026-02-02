@@ -96,14 +96,14 @@ if __name__ == '__main__':
         'mir': {
             'center': [0.0, 0.0] # Questo verrà sovrascritto dalla posizione reale
         }, 
-        # 'rover': {
-        #     'center': [5.0, 2.0] # Ostacolo fisso (o orbitante) nel punto 5,2 di odom
-        # }, 
-        # 'person': {
-        #     'center': [1.0, 1.0] # Ostacolo statico a 1 metro dall'origine odom
-        # },
+        'rover': {
+            'center': [3.0, 1.0] # Ostacolo fisso (o orbitante) nel punto 5,2 di odom
+        }, 
+        'person': {
+            'center': [6.7, 0.0] # Ostacolo statico a 1 metro dall'origine odom
+        },
         'cardboard_box': {
-            'center': [2.0, 2.5] # Ostacolo statico a 1 metro dall'origine odom
+            'center': [4.5, -1.5] # Ostacolo statico a 1 metro dall'origine odom
         }
     }
     

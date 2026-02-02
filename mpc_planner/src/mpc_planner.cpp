@@ -22,6 +22,7 @@
 #include <casadi/casadi.hpp>
 #include <yaml-cpp/yaml.h>
 #include <gazebo_msgs/ModelStates.h>
+#include <chrono>
 #include <mpc_planner/classes.h>
 #include "mpc_planner/mpcParameters.h"
 #include "mpc_planner/mpcStatistics.h"
@@ -205,6 +206,15 @@ namespace mpc_planner {
         g.push_back(x0 - x_init);
         lbg = cs::DM::zeros(nx);
         ubg = cs::DM::zeros(nx);
+
+        // Apply tolerance ONLY to the initial state indices (0 to nx-1)
+        double init_state_tol = 0.03;
+
+        for (int i = 0; i < nx; ++i) {
+            lbg(i) = -init_state_tol;
+            ubg(i) =  init_state_tol;
+        }
+
 
 
         // Parametri robot per ellisse (usati simbolicamente solo come numerici qui)
@@ -396,10 +406,10 @@ namespace mpc_planner {
 
         // ===== Solver settings =====
         cs::Dict opts;
-        opts["ipopt.print_level"] = 0;
+        opts["ipopt.print_level"] = 0; //default = 0 (no information)
         opts["print_time"] = 0;
         opts["ipopt.tol"] = 1e-3;
-        opts["ipopt.max_iter"] = 100;
+        opts["ipopt.max_iter"] = 150;
         // opts["record_time"] = true;
 
         solver_ = nlpsol("solver", "ipopt", nlp, opts);
@@ -468,7 +478,7 @@ namespace mpc_planner {
             pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
             pub_optimal_traj = nh_.advertise<nav_msgs::Path>("/move_base/TrajectoryPlannerROS/local_plan", 1);
             pub_ref_posearray = nh_.advertise<geometry_msgs::PoseArray>("/pose_array",1);
-            // pub_mpc_stats = nh_.advertise<mpc_planner::mpcStatistics>("/mpc/statistics",1);
+            pub_mpc_stats = nh_.advertise<mpc_planner::mpcStatistics>("/mpc/statistics",1);
 
             clearCostmap_service_client = nh_.serviceClient<std_srvs::Empty>("/move_base_node/clear_costmaps");
 
@@ -1113,8 +1123,15 @@ namespace mpc_planner {
                 arg["p"]    = p;
 
 
-                // Solve MPC optimization problem
+                // Solve MPC optimization problem and compute execution time
+                auto start = std::chrono::steady_clock::now();
                 std::map<std::string, cs::DM> res = solver_(arg);
+                auto end = std::chrono::steady_clock::now();
+                std::chrono::duration<double> elapsed = end - start;
+                double execution_time = elapsed.count();
+
+
+                
                 if (res.count("x") == 0) {
                     ROS_ERROR("Solver did not return 'x' in result map");
                     return false; // o gestisci fallback
@@ -1157,19 +1174,18 @@ namespace mpc_planner {
                 std::string status = static_cast<std::string>(stats["return_status"]);
 
                 // publishing mpc statistics
-                // mpc_planner::mpcStatistics stats_msg;
+                mpc_planner::mpcStatistics stats_msg;
                 
 
                 // // "t_wall_total" è il tempo totale (in secondi) dall'inizio alla fine della chiamata
                 // stats_msg.total_wall_time = stats.at("t_wall_total").to_double();
                 // stats_msg.total_process_time = stats.at("t_proc_total").to_double();
-
-                // // Estrazione iterazioni
-                // stats_msg.iterations = static_cast<int>(stats["iter_count"]);
-                // // stats_msg.status = status;
+                stats_msg.execution_time = execution_time;
+                stats_msg.iterations = static_cast<int>(stats["iter_count"]);
+                stats_msg.status = status;
 
                 // // Pubblica
-                // pub_mpc_stats.publish(stats_msg);
+                pub_mpc_stats.publish(stats_msg);
 
 
 
@@ -1200,6 +1216,7 @@ namespace mpc_planner {
                     double obstacle_cost = 0.0;
                     double slack_terminal_cost = 0.0;
                     double slack_obs_cost = 0.0;
+                    double slack_penalty = 1e8;
 
                     for (int k = 0; k < Np; ++k) {
                         // --- Stati ---
@@ -1255,7 +1272,7 @@ namespace mpc_planner {
 
                             // Slack cost per questo ostacolo
                             double s_jk = s_obs_opt(idx_obs).scalar();
-                            slack_obs_cost += 1e8 * s_jk * s_jk;
+                            slack_obs_cost += slack_penalty * s_jk * s_jk;
                         }
                     }
 
@@ -1420,6 +1437,26 @@ namespace mpc_planner {
                     // cmd_vel.linear.x = 0.0;
                     // cmd_vel.angular.z = 0.0;
                     
+
+                    // Get the values of 'g' (constraints) from the result map
+                    std::vector<double> g_vec  = std::vector<double>(res.at("g"));
+                    std::vector<double> lbg_vec = std::vector<double>(lbg);
+                    std::vector<double> ubg_vec = std::vector<double>(ubg);
+
+                    for (size_t i = 0; i < g_vec.size(); ++i) {
+                        double g_val = g_vec[i];
+                        double lb    = lbg_vec[i];
+                        double ub    = ubg_vec[i];
+                        
+                        if (g_val < lb - 1e-4 || g_val > ub + 1e-4) {
+                            std::cout << "Violation at Constraint [" << i << "]: " 
+                                    << lb << " <= " << g_val << " <= " << ub 
+                                    << " (Error: " << (g_val < lb ? lb - g_val : g_val - ub) << ")" 
+                                    << std::endl;
+                        }
+                    }
+
+
                     // Reset warm start per tentare un "Cold Start" al prossimo loop
                     U_previous = cs::DM::zeros(nu * Np);
                     X_previous = cs::DM::zeros(nx * (Np + 1)); 

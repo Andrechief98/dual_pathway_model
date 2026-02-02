@@ -1,4 +1,3 @@
-float64 total_wall_time
-float64 total_process_time
+float64 execution_time
 int32 iterations
 string status

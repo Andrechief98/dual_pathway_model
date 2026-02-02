@@ -11,7 +11,7 @@ from gazebo_msgs.msg import ModelStates
 from functools import partial
 
 class OptiTrackerNode:
-    def __init__(self, object_names, target_frame="odom", rate_hz=100):
+    def __init__(self, object_names, target_frame="odom", rate_hz=20):
         """
         Initialize the OptitrackerNode that collects objects pose published from the OptiTrack.
         
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     # 'mir' must be in the list to initialize the origin
     objects = ['mir', 'rover', 'cardboard_box', 'person']
     
-    # objects = ['mir', 'cardboard_box']
+    # objects = ['mir', 'person']
     try:
         bridge = OptiTrackerNode(objects)
         bridge.run()
