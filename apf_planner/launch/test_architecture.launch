@@ -68,9 +68,20 @@
 
     </group>
     
-    <include file="$(find vrpn_client_ros)/launch/sample.launch">
+    <!-- <include file="$(find vrpn_client_ros)/launch/sample.launch">
         <arg name="server" value="192.168.1.130"/>
-    </include>
+    </include> -->
+
+    <arg name="server" default="192.168.1.130"/>
+
+    <node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen">
+        <param name="server" value="$(arg server)"/>
+        <param name="port" value="3883"/>
+        <param name="update_frequency" value="30.0"/>
+        <param name="use_server_time" value="false"/>
+        <param name="broadcast_tf" value="true"/>
+        <param name="refresh_tracker_frequency" value="1.0"/>
+    </node>
 
     <node pkg="dual_pathway_interfaces"         type="optitracker_node.py"                  name="optitracker"                      output="screen" />
     <node pkg="dual_pathway_interfaces"         type="odom_world_static_broadcaster.py"     name="calibration_node"                 output="screen" />

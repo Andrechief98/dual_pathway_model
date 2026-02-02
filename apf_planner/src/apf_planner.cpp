@@ -210,8 +210,26 @@ namespace apf_planner{
 
     void ApfPlanner::set_Position_Orientation_Info(){
 
-        curr_robot_coordinates={robot_pose_.pose.pose.position.x, robot_pose_.pose.pose.position.y}; 
-        curr_robot_orientation=tf2::getYaw(robot_pose_.pose.pose.orientation); 
+        // curr_robot_coordinates={robot_pose_.pose.pose.position.x, robot_pose_.pose.pose.position.y}; 
+        // curr_robot_orientation=tf2::getYaw(robot_pose_.pose.pose.orientation); 
+
+        // Extract the Pose as a PoseStamped
+        geometry_msgs::PoseStamped odom_pose, map_pose;
+        odom_pose.header = robot_pose_.header; // Use the odom message header
+        odom_pose.pose = robot_pose_.pose.pose; // Use the pose within the odom message
+
+        try {
+            // 2. Transform the PoseStamped (this IS supported by tf2_geometry_msgs.h)
+            tf_->transform(odom_pose, map_pose, "map");
+
+            // 3. Use the result
+            curr_robot_coordinates = {map_pose.pose.position.x, map_pose.pose.position.y};
+            curr_robot_orientation = tf2::getYaw(map_pose.pose.orientation);
+            
+        } catch (tf2::TransformException &ex) {
+            ROS_WARN("Transform failed: %s", ex.what());
+        }
+
 
         std::cout << "\n";
         std::cout << "**VETTORI COORDINATE GOAL E COORDINATE ROBOT CALCOLATI: " << std::endl;
@@ -278,7 +296,8 @@ namespace apf_planner{
         tf2::Vector3 velocity_in_target_frame = transform * velocity_in_child_frame;
 
         //aggiorno il vettore velocità attuale del robot con i nuovi valori rispetto al frame "map"
-        curr_robot_lin_vel={velocity_in_target_frame[0],velocity_in_target_frame[1]};
+        double epsilon = 1e-8;
+        curr_robot_lin_vel={velocity_in_target_frame[0] + epsilon,velocity_in_target_frame[1] + epsilon};
 
         //calcolo la direzione attuale del robot rispetto al frame "map" come versore della velocità attuale:
         for(int i=0; i<n_robot.size();i++){
@@ -331,6 +350,10 @@ namespace apf_planner{
 
             n_obs=compute_direction(curr_robot_coordinates, obstacle.coordinate);  
             F_fov=lambda+(1-lambda)*((1+compute_cos_gamma(n_robot, n_obs))/2); 
+            std::cout << "Obstacle coordinates: " << obstacle.coordinate[0] << " " << obstacle.coordinate[1] << std::endl;
+            std::cout << "Obstacle lambda: " << lambda << std::endl;
+            std::cout << "Obstacle cos_gamma: " << compute_cos_gamma(n_robot, n_obs) << std::endl;
+            
 
 
             // 3. Calcolo dell'angolo relativo tra l'asse del robot e l'ostacolo
@@ -349,6 +372,10 @@ namespace apf_planner{
 
             double distance = vect_norm2(curr_robot_coordinates, obstacle.coordinate) - obstacle.radius ; //- r_robot_local;
             std::cout << "Obstacle distance: " << distance << std::endl;
+            std::cout << "Obstacle radius: " << obstacle.radius << std::endl;
+            std::cout << "Obstacle F_fov: " << F_fov << std::endl;
+            std::cout << "Obstacle n_obs: " << n_obs[0] << " " << n_obs[1] << std::endl;
+            std::cout << "Obstacle n_robot: " << n_robot[0] << " " << n_robot[1] << std::endl;
             for(int k=0; k < obstacle.F_rep_obs.size(); k++){
 
                 // First possible equation:
