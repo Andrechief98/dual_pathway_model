@@ -12,7 +12,6 @@ class StaticOdomWorldBroadcaster:
         self.br = tf.TransformBroadcaster()
         self.static_transform = None
         
-        # Sottoscriviamo al topic della posa (es. da un sistema GPS o MoCap)
         self.sub = rospy.Subscriber('/vrpn_client_node/mir/pose', PoseStamped, self.handle_pose)
         
         rospy.loginfo("In attesa della prima posa per bloccare il frame world...")

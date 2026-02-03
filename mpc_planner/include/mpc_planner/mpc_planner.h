@@ -136,6 +136,7 @@ private:
 
     // Callback functions
     void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
+    ros::Time odom_last_time;
     void obstacleOptitrackerCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
     void paramsCallback(const mpcParameters::ConstPtr& msg);
 

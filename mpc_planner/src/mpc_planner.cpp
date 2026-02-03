@@ -208,7 +208,7 @@ namespace mpc_planner {
         ubg = cs::DM::zeros(nx);
 
         // Apply tolerance ONLY to the initial state indices (0 to nx-1)
-        double init_state_tol = 0.03;
+        double init_state_tol = 0.1;
 
         for (int i = 0; i < nx; ++i) {
             lbg(i) = -init_state_tol;
@@ -475,7 +475,7 @@ namespace mpc_planner {
             sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
             sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/optitracker/model_states", 1, &MpcPlanner::obstacleOptitrackerCallback, this);
             sub_mpc_params = nh_.subscribe<mpcParameters>("/mpc/params",1, &MpcPlanner::paramsCallback, this);
-            pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
+            pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
             pub_optimal_traj = nh_.advertise<nav_msgs::Path>("/move_base/TrajectoryPlannerROS/local_plan", 1);
             pub_ref_posearray = nh_.advertise<geometry_msgs::PoseArray>("/pose_array",1);
             pub_mpc_stats = nh_.advertise<mpc_planner::mpcStatistics>("/mpc/statistics",1);
@@ -698,6 +698,8 @@ namespace mpc_planner {
     void MpcPlanner::odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
         // current_odom_.twist = msg->twist;
         current_odom_ = *msg;
+
+        odom_last_time = msg->header.stamp;
     }
 
     void MpcPlanner::obstacleOptitrackerCallback(const gazebo_msgs::ModelStates::ConstPtr& msg){
@@ -711,17 +713,17 @@ namespace mpc_planner {
                      
             //         current_odom_.pose.pose = msg->pose[i];
 
-            //         Print position (x, y, z)
-            //         ROS_INFO("Position -> x: [%f], y: [%f], z: [%f]", 
-            //                 current_odom_.pose.pose.position.x, 
-            //                 current_odom_.pose.pose.position.y, 
-            //                 current_odom_.pose.pose.position.z);
+            //         // Print position (x, y, z)
+            //         // ROS_INFO("Position -> x: [%f], y: [%f], z: [%f]", 
+            //         //         current_odom_.pose.pose.position.x, 
+            //         //         current_odom_.pose.pose.position.y, 
+            //         //         current_odom_.pose.pose.position.z);
 
-            //         ROS_INFO("Orientation (Quat) -> x: [%f], y: [%f], z: [%f], w: [%f]",
-            //             current_odom_.pose.pose.orientation.x,
-            //             current_odom_.pose.pose.orientation.y,
-            //             current_odom_.pose.pose.orientation.z,
-            //             current_odom_.pose.pose.orientation.w);
+            //         // ROS_INFO("Orientation (Quat) -> x: [%f], y: [%f], z: [%f], w: [%f]",
+            //         //     current_odom_.pose.pose.orientation.x,
+            //         //     current_odom_.pose.pose.orientation.y,
+            //         //     current_odom_.pose.pose.orientation.z,
+            //         //     current_odom_.pose.pose.orientation.w);
                     
             //     }
             // }
@@ -1479,6 +1481,7 @@ namespace mpc_planner {
         geometry_msgs::TwistStamped cmd_vel_stamped;
 
         cmd_vel_stamped.header.frame_id="map";
+        cmd_vel_stamped.header.stamp = ros::Time::now(); //odom_last_time;
         cmd_vel_stamped.twist.linear.x = cmd_vel.linear.x;
         cmd_vel_stamped.twist.angular.z = cmd_vel.angular.z;
 

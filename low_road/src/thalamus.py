@@ -39,7 +39,7 @@ class ThalamusNode:
         self.thalamus_info_pub = rospy.Publisher("/thalamus/info", String, queue_size=1)
 
         # Subscribers
-        self.odom_sub = rospy.Subscriber("/odometry/filtered", Odometry, self.odom_feedback_callback)
+        self.odom_sub = rospy.Subscriber("/odom", Odometry, self.odom_feedback_callback)
         self.gazebo_sub = rospy.Subscriber("/optitracker/model_states", ModelStates, self.thalamus_info_callback)
 
         # Server
