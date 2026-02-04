@@ -24,7 +24,7 @@ experiments:
         - 0.5 to 0.79 [HIGH]: Mandatory baseline for Humans, animals, and other robots or machinery. Includes fragile or unpredictable entities that may change trajectory suddenly.
         - 0.8 to 1.0 [CRITICAL]: Imminent collision path, extreme proximity (<0.5m), or high-speed erratic movement.
 
-        Return a very coinces response considering indicated JSON format. Prioritize Human safety. CONCENTRATE ONLY ON PROVIDED OBJECTS INFO
+        Return a very coinces response considering indicated JSON format. Prioritize Human safety. CONCENTRATE ONLY ON PROVIDED OBJECTS INFO. IF YOU ARE NOT ABLE TO EXTRACT VISUAL FEATURES FOR AN OBJECT (PERSON INCLUDED).
 
         [EXAMPLE OF ANALYSIS]
             {

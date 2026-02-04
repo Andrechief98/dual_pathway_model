@@ -264,17 +264,17 @@ class ThalamusNode:
                 # atan2(dz, ground_distance)
                 angle_v = math.atan2(rel_z, dist_norm)
 
-                horizontal_fov_limit = math.radians(45.6)
+                horizontal_fov_limit = math.radians(60)
                 vertical_fov_limit = math.radians(32.75)
 
                 # The object is within robot's field of view (needed for the VLM)
-                if self.test == "hr" or self.test == "dp":
-                    if abs(angle_diff) <= horizontal_fov_limit:   
-                        if abs(angle_v) <= vertical_fov_limit:
-                            self.relevant_object_list.append(name)
-                else:
-                    if abs(angle_diff) <= horizontal_fov_limit:   
-                        self.relevant_object_list.append(name)
+                # if self.test == "hr" or self.test == "dp":
+                #     if abs(angle_diff) <= horizontal_fov_limit:   
+                #         if abs(angle_v) <= vertical_fov_limit:
+                #             self.relevant_object_list.append(name)
+                # else:
+                if abs(angle_diff) <= horizontal_fov_limit:   
+                    self.relevant_object_list.append(name)
                 
 
 

@@ -214,7 +214,7 @@ def plot_multi_trajectory(all_data):
 
 
 
-def plot_trajectory_keyframes(all_data, T_END=30, DT_FOOTSTEP=4, cols=4):
+def plot_trajectory_keyframes(all_data, T_END=40, DT_FOOTSTEP=4, cols=4):
     items_to_plot = list(all_data.items())
     if not items_to_plot: return
 
