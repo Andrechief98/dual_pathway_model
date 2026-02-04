@@ -180,7 +180,7 @@ namespace mpc_planner {
             + terminal_slack_penalty * s * s;
 
         // Cost for obstacle slack variables
-        double slack_penalty = 1e8;
+        double slack_penalty = 5e3;
 
         // Somma dei quadrati di tutti gli s_obs
         for (int idx = 0; idx < ns_obs; ++idx) {
@@ -208,7 +208,7 @@ namespace mpc_planner {
         ubg = cs::DM::zeros(nx);
 
         // Apply tolerance ONLY to the initial state indices (0 to nx-1)
-        double init_state_tol = 0.1;
+        double init_state_tol = 0.15;
 
         for (int i = 0; i < nx; ++i) {
             lbg(i) = -init_state_tol;
@@ -472,7 +472,7 @@ namespace mpc_planner {
                 robot_width = 0.8;
             }
 
-            sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
+            // sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
             sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/optitracker/model_states", 1, &MpcPlanner::obstacleOptitrackerCallback, this);
             sub_mpc_params = nh_.subscribe<mpcParameters>("/mpc/params",1, &MpcPlanner::paramsCallback, this);
             pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
@@ -707,26 +707,26 @@ namespace mpc_planner {
         try{
 
             // Update posizione robot
-            // for (int i = 0; i < msg->name.size(); i++){
-            //     std::string name = msg->name[i];
-            //     if (name == "mir"){
+            for (int i = 0; i < msg->name.size(); i++){
+                std::string name = msg->name[i];
+                if (name == "mir"){
                      
-            //         current_odom_.pose.pose = msg->pose[i];
+                    current_odom_.pose.pose = msg->pose[i];
 
-            //         // Print position (x, y, z)
-            //         // ROS_INFO("Position -> x: [%f], y: [%f], z: [%f]", 
-            //         //         current_odom_.pose.pose.position.x, 
-            //         //         current_odom_.pose.pose.position.y, 
-            //         //         current_odom_.pose.pose.position.z);
+                    // Print position (x, y, z)
+                    // ROS_INFO("Position -> x: [%f], y: [%f], z: [%f]", 
+                    //         current_odom_.pose.pose.position.x, 
+                    //         current_odom_.pose.pose.position.y, 
+                    //         current_odom_.pose.pose.position.z);
 
-            //         // ROS_INFO("Orientation (Quat) -> x: [%f], y: [%f], z: [%f], w: [%f]",
-            //         //     current_odom_.pose.pose.orientation.x,
-            //         //     current_odom_.pose.pose.orientation.y,
-            //         //     current_odom_.pose.pose.orientation.z,
-            //         //     current_odom_.pose.pose.orientation.w);
+                    // ROS_INFO("Orientation (Quat) -> x: [%f], y: [%f], z: [%f], w: [%f]",
+                    //     current_odom_.pose.pose.orientation.x,
+                    //     current_odom_.pose.pose.orientation.y,
+                    //     current_odom_.pose.pose.orientation.z,
+                    //     current_odom_.pose.pose.orientation.w);
                     
-            //     }
-            // }
+                }
+            }
 
             if (obstacles_list.size() != msg->name.size()-1){
 
@@ -1218,7 +1218,7 @@ namespace mpc_planner {
                     double obstacle_cost = 0.0;
                     double slack_terminal_cost = 0.0;
                     double slack_obs_cost = 0.0;
-                    double slack_penalty = 1e8;
+                    double slack_penalty = 5e3;
 
                     for (int k = 0; k < Np; ++k) {
                         // --- Stati ---
@@ -1438,6 +1438,114 @@ namespace mpc_planner {
                     // Stop robot
                     // cmd_vel.linear.x = 0.0;
                     // cmd_vel.angular.z = 0.0;
+
+
+
+                    cs::DM X_opt= solution(cs::Slice(0, nx*(Np+1)));                               // primi nx*(Np+1) valori → stati
+                    std::cout << "X: " << X_opt.size1() << std::endl;
+                    cs::DM U_opt = solution(cs::Slice(nx*(Np+1), nx*(Np+1)+nu*Np));                 // restanti nu*Np valori → controlli
+                    std::cout << "U: " << U_opt.size1() << std::endl;
+                    cs::DM s_opt = solution(cs::Slice(nx*(Np+1) + nu*Np, nx*(Np+1) + nu*Np + ns));   
+                    std::cout << "s: " << s_opt.size1() << std::endl;
+                    cs::DM s_obs_opt = solution(cs::Slice(nx*(Np+1) + nu*Np + ns, nx*(Np+1) + nu*Np + ns + Np*N_obs)) ;
+                    std::cout << "s_obs: " << s_obs_opt.size1() << std::endl;
+
+                    std::cout << "Dimension of solution: " << (int)solution.size1() << std::endl;
+
+
+                    double state_cost = 0.0;
+                    double input_cost = 0.0;
+                    double obstacle_cost = 0.0;
+                    double slack_terminal_cost = 0.0;
+                    double slack_obs_cost = 0.0;
+                    double slack_penalty = 5e3;
+
+                    for (int k = 0; k < Np; ++k) {
+                        // --- Stati ---
+                        double x_ = X_opt(nx*k + 0).scalar();
+                        double y_ = X_opt(nx*k + 1).scalar();
+                        double th_ = X_opt(nx*k + 2).scalar();
+
+                        double x_r = p(nx + nx*k + 0).scalar();
+                        double y_r = p(nx + nx*k + 1).scalar();
+                        double th_r = p(nx + nx*k + 2).scalar();
+
+                        double dth_ = std::atan2(std::sin(th_r - th_), std::cos(th_r - th_));
+
+                        state_cost += Q(0) * (x_r - x_)*(x_r - x_)
+                                    + Q(1) * (y_r - y_)*(y_r - y_)
+                                    + Q(2) * dth_*dth_;
+
+                        // --- Input ---
+                        double v = U_opt(nu*k + 0).scalar();
+                        double w = U_opt(nu*k + 1).scalar();
+                        input_cost += R(0) * v*v + R(1) * w*w;
+
+                        // --- Obstacle ---
+                        for (int j = 0; j < N_obs; ++j) {
+                            double alfa_j = p(weights_start_idx + 8 + j).scalar();
+                            double beta_j = p(weights_start_idx + 8 + N_obs + j).scalar();
+
+                            int idx_obs = j*Np + k;
+                            double obs_x = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 0).scalar();
+                            double obs_y = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 1).scalar();
+                            double obs_vx = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 2).scalar();
+                            double obs_vy = p(weights_start_idx + N_cost_params + nu + N_obs_info*j + 3).scalar();
+
+                            double fut_obs_x = obs_x + k*dt*obs_vx;
+                            double fut_obs_y = obs_y + k*dt*obs_vy;
+
+                            double dx = x - fut_obs_x;
+                            double dy = y - fut_obs_y;
+                            double distance = std::sqrt(dx*dx + dy*dy);
+
+
+                            
+                            if (penalty == "logarithmic"){
+                                // Logarithmic penalty
+                                obstacle_cost += -alfa_j * std::log(beta_j * distance);
+                            }
+                            else if (penalty == "square"){
+                                // Square penalty
+                                obstacle_cost += alfa_j - beta_j*(distance * distance);
+                            }
+
+                            // std::cout << "Distance from obstacle: " << distance << std::endl;
+
+                            // Slack cost per questo ostacolo
+                            double s_jk = s_obs_opt(idx_obs).scalar();
+                            slack_obs_cost += slack_penalty * s_jk * s_jk;
+                        }
+                    }
+
+
+                    // --- Terminal cost ---
+                    double xN_ = X_opt(nx*Np + 0).scalar();
+                    double yN_ = X_opt(nx*Np + 1).scalar();
+                    double thN_ = X_opt(nx*Np + 2).scalar();
+
+                    double x_rN = p(nx + nx*Np + 0).scalar();
+                    double y_rN = p(nx + nx*Np + 1).scalar();
+                    double th_rN = p(nx + nx*Np + 2).scalar();
+
+                    double dth_N_ = std::atan2(std::sin(th_rN - thN_), std::cos(th_rN - thN_));
+                    state_cost += P(0) * (x_rN - xN_)*(x_rN - xN_)
+                                + P(1) * (y_rN - yN_)*(y_rN - yN_)
+                                + P(2) * dth_N_*dth_N_;
+
+                    // --- Terminal slack ---
+                    for (int i = 0; i < ns; ++i) {
+                        slack_terminal_cost += 30 * s_opt(i).scalar() * s_opt(i).scalar();
+                    }
+
+                    // --- Costo totale ---
+                    double J_total = state_cost + input_cost + obstacle_cost + slack_terminal_cost + slack_obs_cost;
+
+                    std::cout << "Costo totale: " << J_total << std::endl;
+                    std::cout << "Stato: " << state_cost << ", Input: " << input_cost 
+                            << ", Ostacoli: " << obstacle_cost 
+                            << ", Slack terminale: " << slack_terminal_cost
+                            << ", Slack ostacoli: " << slack_obs_cost << std::endl;
                     
 
                     // Get the values of 'g' (constraints) from the result map

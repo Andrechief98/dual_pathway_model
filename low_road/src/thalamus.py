@@ -39,11 +39,12 @@ class ThalamusNode:
         self.thalamus_info_pub = rospy.Publisher("/thalamus/info", String, queue_size=1)
 
         # Subscribers
-        self.odom_sub = rospy.Subscriber("/odom", Odometry, self.odom_feedback_callback)
+        # self.odom_sub = rospy.Subscriber("/odom", Odometry, self.odom_feedback_callback)
         self.gazebo_sub = rospy.Subscriber("/optitracker/model_states", ModelStates, self.thalamus_info_callback)
 
         # Server
         self.camera_image_server = rospy.Service('/get_camera_image', highRoadInfo, self.getCameraImage)
+        self.test = rospy.get_param("/test", "")
 
         # Action Clients
         self.cerebralCortexClient =  actionlib.SimpleActionClient("/cerebral_cortex_call", promptProcessingAction)
@@ -256,9 +257,24 @@ class ThalamusNode:
                     "radial_vel"        :   v_rad_obj,
                 }
 
-                if abs(angle_diff) <= math.radians(60):   # 120° Field Of View
-                    # The object is within robot's field of view (needed for the VLM)
-                    self.relevant_object_list.append(name)
+                # Calculate vertical angle (Pitch)
+                cam_h = 1.6
+                rel_z = obj_pos[2] - cam_h
+
+                # atan2(dz, ground_distance)
+                angle_v = math.atan2(rel_z, dist_norm)
+
+                horizontal_fov_limit = math.radians(45.6)
+                vertical_fov_limit = math.radians(32.75)
+
+                # The object is within robot's field of view (needed for the VLM)
+                if self.test == "hr" or self.test == "dp":
+                    if abs(angle_diff) <= horizontal_fov_limit:   
+                        if abs(angle_v) <= vertical_fov_limit:
+                            self.relevant_object_list.append(name)
+                else:
+                    if abs(angle_diff) <= horizontal_fov_limit:   
+                        self.relevant_object_list.append(name)
                 
 
 

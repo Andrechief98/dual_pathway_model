@@ -543,7 +543,7 @@ if __name__ == "__main__":
             if data: all_experiments_results[file_name] = data
 
     if all_experiments_results:
-        # plot_multi_trajectory(all_experiments_results)
+        plot_multi_trajectory(all_experiments_results)
         
         plot_trajectory_keyframes(all_data=all_experiments_results)
         
