@@ -242,7 +242,7 @@ def plot_multi_trajectory(all_data):
                                       angle=yrw[idx], color=robot_color, fill=False, 
                                       linestyle='--', linewidth=1, alpha=0.6)
                 ax.add_patch(ell)
-                ax.text(xr[idx], yr[idx] + 0.35, f"t={t_val:.1f}", color=robot_color, 
+                ax.text(xr[idx], yr[idx] + 0.50, f"t={t_val:.1f}", color=robot_color, 
                         fontsize=9, ha='center', fontweight='bold', 
                         bbox=dict(facecolor='white', alpha=0.5, edgecolor='none', pad=1)) # Sfondo per leggibilità
 
@@ -291,7 +291,7 @@ def plot_multi_trajectory(all_data):
 
 
 
-def plot_trajectory_keyframes(all_data, T_END=40, DT_FOOTSTEP=4, cols=4):
+def plot_trajectory_keyframes(all_data, T_END=50, DT_FOOTSTEP=4, cols=4):
     """
     Genera keyframes per ostacoli DINAMICI.
     Colori specifici per Person e Rover, con legenda unificata (patch + bordo).
@@ -504,7 +504,7 @@ def plot_velocities_combined(all_data):
     ax_lin.set_ylabel(r'$v\ [\mathrm{m/s}]$', fontsize=12)
     ax_lin.grid(True, linestyle=':', alpha=0.6)
     ax_lin.set_ylim([-0.1, 1])
-    ax_lin.set_xlim([0, 35])
+    ax_lin.set_xlim([0, 50])
     # Legenda leggermente ingrandita come richiesto prima
     ax_lin.legend(loc='upper right', fontsize='small', ncol=1)
 
@@ -512,7 +512,7 @@ def plot_velocities_combined(all_data):
     ax_ang.set_ylabel(r'$\omega\ [\mathrm{rad/s}]$', fontsize=12)
     ax_ang.set_xlabel(r'$t\ [\mathrm{s}]$', fontsize=12)
     ax_ang.grid(True, linestyle=':', alpha=0.6)
-    ax_ang.set_xlim([0, 35])
+    ax_ang.set_xlim([0, 50])
     ax_ang.set_ylim([-2.2, 2.2])
     ax_ang.legend(loc='upper right', fontsize='small', ncol=1)
 
@@ -632,7 +632,7 @@ def plot_distances_by_obstacles(all_data):
         # Formattazione Subplot
         ax.set_title(rf'$\mathrm{{{obs_label}}}$', fontsize=14)
         ax.set_ylabel(r'$d\ [\mathrm{m}]$', fontsize=12)
-        ax.set_xlim(0, 35)
+        ax.set_xlim(0, 50)
         ax.set_ylim(-1, 10) # Range ottimale per vedere gli avvicinamenti
         ax.grid(True, linestyle='--', alpha=0.5)
         ax.legend(loc='upper right', fontsize='small', ncol=1)

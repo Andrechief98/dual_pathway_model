@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CONTAINER_NAME="andrea_docker-ros1_noetic-1"
-DURATION=40
+DURATION=50
 
 BAG_NAME="APF_dynamic"  
 TOPICS="/odom /cmd_vel /optitracker/model_states /odometry/filtered" 
