@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import rospy
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from PIL import Image as PILImage
 import cv2
+import math
 from dual_pathway_interfaces.srv import highRoadInfo, highRoadInfoRequest
 from ollama import chat
 import time
@@ -90,6 +91,10 @@ class VLMnode:
 
         # Publisher
         self.image_description_pub = rospy.Publisher("/vlm/image/description", String, queue_size=1)
+        self.VLM_inf_pub = rospy.Publisher("/vlm/inference/time", Float32, queue_size=1)
+
+        # Service client
+        self.get_image_service = rospy.ServiceProxy("/get_camera_image", highRoadInfo)
 
         self.streaming = True
 
@@ -117,10 +122,14 @@ class VLMnode:
 
     def get_frame_from_camera(self):
         try:
-            frame = rospy.wait_for_message("/camera/color/image_raw", Image)
+            rospy.wait_for_service('/get_camera_image')
+            response = self.get_image_service()
+
+            relevant_info = response.relevant_info
+            frame = response.frame
 
             cv_image = self.bridge.imgmsg_to_cv2(frame, desired_encoding='bgr8')
-            return cv_image
+            return cv_image, relevant_info
         
         except rospy.ServiceException as e:
             rospy.logwarn(f"[VLMImageRequester] Errore chiamando il servizio: {e}")
@@ -174,32 +183,62 @@ class VLMnode:
         return base64_string
 
 
-    def vlm_inference(self, base64_image):
+    def vlm_inference(self, base64_image, relevant_info_msg):
         
         mask_object_name = False
 
         print("Previous info:")
         print(self.previous_info)
 
-        
+        if mask_object_name:
+            relevant_info = json.loads(relevant_info_msg)
+            print("Current info:")
+            print(relevant_info)
 
-        prompt = "describe what you see!"
+            # Substituting Explicit keys with "object id"
+            current_info = {}
+            id = 1
+            
+            for k,v in relevant_info.items():
+                object_id = "object_" + str(id)
+                current_info[object_id] = relevant_info[k]
+                id += 1
+            print("Masked current info:")
+            print(current_info)
+        else:
+
+            # artifically remove the "person"
+             
+            current_info = json.loads(relevant_info_msg)
+
+            if self.experiment == "dynamic":
+                name_to_remove = "person"
+                if name_to_remove in list(current_info.keys()):
+                    del current_info[name_to_remove]
+
+
+
+            print("Current info:")
+            print(current_info)
+
+
+        prompt = self.build_prompt(current_info)
 
 
         vlm_inference_response = chat(
             'qwen3-vl:8b-instruct',
             messages=[
-                    # {
-                    #     'role': 'system',
-                    #     'content': SYSTEM_PROMPT
-                    # },
+                    {
+                        'role': 'system',
+                        'content': SYSTEM_PROMPT
+                    },
                     {
                         'role': 'user', 
                         'content': prompt,
                         'images': [base64_image]
                     }
                 ],
-            # format=vlmResponse.model_json_schema(),
+            format=vlmResponse.model_json_schema(),
             options={
                 'temperature': 0,
                 # 'top_p': 0.8,
@@ -210,6 +249,7 @@ class VLMnode:
         )
 
 
+        self.previous_info = current_info
 
         if self.streaming:
             full_response_content = ""
@@ -224,7 +264,14 @@ class VLMnode:
             # ]
             self.image_description_pub.publish(full_response_content)
 
+            response_dict = json.loads(full_response_content)
 
+
+            for object in response_dict["objects"]:
+                self.previous_info[object['name']] = {
+                "dangerousness": object['dangerousness'],
+                "info": current_info.get(object['name'], "N/A")
+            }
             
 
 
@@ -249,9 +296,47 @@ class VLMnode:
 
 
     def run(self):
-        while not rospy.is_shutdown():
+        test_objects = rospy.get_param("/test_objects", ["rover"])
 
-            cv_image = self.get_frame_from_camera()
+        object_info = {
+                "rover": {
+                    "relative_dist"     :   2.5,
+                    "relative_angle"    :   math.radians(45),
+                    "radial_vel"        :   0.0,
+                },
+                "cardboard_box": {
+                    "relative_dist"     :   1.65,
+                    "relative_angle"    :   math.radians(60),
+                    "radial_vel"        :   0.0,
+                },
+                "person": {
+                    "relative_dist"     :   3,
+                    "relative_angle"    :   math.radians(30),
+                    "radial_vel"        :   0.0,
+                },
+                "chair": {
+                    "relative_dist"     :   4.35,
+                    "relative_angle"    :   math.radians(0),
+                    "radial_vel"        :   0.0,
+                },
+                "table": {
+                    "relative_dist"     :   1.6,
+                    "relative_angle"    :   math.radians(60),
+                    "radial_vel"        :   0.0,
+                },
+            }
+
+        extracted_object_info = {}
+
+        for obj_name in test_objects:
+            extracted_object_info[obj_name] = object_info[obj_name]
+
+        relevant_info = json.dumps(extracted_object_info)
+        counter = 0
+
+        while not rospy.is_shutdown() and counter <10:
+
+            cv_image, _ = self.get_frame_from_camera()
             if cv_image is None:
                 continue
 
@@ -260,11 +345,15 @@ class VLMnode:
             base64_image = self.convert_pil_to_base64(pil_image)
             print("#####")
             start_time = time.perf_counter()
-            self.vlm_inference(base64_image)
+            self.vlm_inference(base64_image, relevant_info)
             end_time = time.perf_counter()
-            print(f"\nInference time: {round(end_time-start_time,4)}")
+            inference_time = round(end_time-start_time,4)
+            print(f"\nInference time: {inference_time}")
             print("#####")
-            # rospy.sleep(5)
+            
+            self.VLM_inf_pub.publish(float(inference_time))
+            counter += 1
+            print(f"Counter = {counter}")
 
 
 if __name__ == '__main__':

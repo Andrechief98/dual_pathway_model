@@ -1,0 +1,7 @@
+<launch>
+    <arg name="objects" default='["rover"]' />
+
+    <node name="vlm_node" pkg="high_road" type="VisualLanguageModel_latency.py" output="screen">
+        <rosparam param="/test_objects" subst_value="True">$(arg objects)</rosparam>
+    </node>
+</launch>
