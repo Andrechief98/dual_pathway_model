@@ -139,9 +139,9 @@ class OptiTrackerNode:
                 print(e)
 if __name__ == '__main__':
     # 'mir' must be in the list to initialize the origin
-    objects = ['mir', 'rover', 'cardboard_box', 'person']
+    # objects = ['mir', 'rover', 'cardboard_box', 'person']
     
-    # objects = ['mir', 'person']
+    objects = ['mir', 'rover','person']
     try:
         bridge = OptiTrackerNode(objects)
         bridge.run()

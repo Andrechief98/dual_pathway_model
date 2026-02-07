@@ -291,7 +291,7 @@ def plot_multi_trajectory(all_data):
 
 
 
-def plot_trajectory_keyframes(all_data, T_END=30, DT_FOOTSTEP=4, cols=4):
+def plot_trajectory_keyframes(all_data, T_END=40, DT_FOOTSTEP=4, cols=4):
     """
     Genera keyframes per ostacoli DINAMICI.
     Colori specifici per Person e Rover, con legenda unificata (patch + bordo).

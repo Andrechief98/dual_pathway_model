@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CONTAINER_NAME="andrea_docker-ros1_noetic-1"
-DURATION=30
+DURATION=40
 
 BAG_NAME="MPC_lr_dynamic"  
 TOPICS="/odom /fearlevel /cmd_vel /thalamus/info /optitracker/model_states /mpc/params /mpc/statistics /amygdala/lowroad/risks /amygdala/highroad/risks /odometry/filtered" 

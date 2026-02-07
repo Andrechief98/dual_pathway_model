@@ -1459,7 +1459,6 @@ namespace mpc_planner {
                     double slack_terminal_cost = 0.0;
                     double slack_obs_cost = 0.0;
                     double slack_penalty = 5e3;
-
                     for (int k = 0; k < Np; ++k) {
                         // --- Stati ---
                         double x_ = X_opt(nx*k + 0).scalar();
