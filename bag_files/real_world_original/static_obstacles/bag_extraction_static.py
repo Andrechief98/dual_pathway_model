@@ -618,7 +618,7 @@ def plot_average_inference_times(all_data):
     ax.grid(True, axis='y', linestyle='--', alpha=0.6)
     
     # Ottimizzazione limiti asse Y per fare spazio alle annotazioni
-    ax.set_ylim(0, 100) 
+    ax.set_ylim(0, 65) 
     
     plt.tight_layout()
     plt.show()
@@ -823,7 +823,7 @@ if __name__ == "__main__":
     if all_experiments_results:
         # plot_multi_trajectory(all_experiments_results)
         
-        # plot_trajectory_keyframes(all_data=all_experiments_results)
+        plot_trajectory_keyframes(all_data=all_experiments_results)
         
         # plot_velocities(all_experiments_results)        
         
@@ -835,7 +835,7 @@ if __name__ == "__main__":
 
         # # plot_fear_phase_space(all_experiments_results)
 
-        # plot_average_inference_times(all_experiments_results)
+        plot_average_inference_times(all_experiments_results)
 
         plot_fear_riemann_integration(all_experiments_results)
         plot_weighted_fear_risk(all_experiments_results)

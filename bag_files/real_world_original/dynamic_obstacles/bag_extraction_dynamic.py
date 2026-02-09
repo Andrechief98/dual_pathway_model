@@ -13,11 +13,13 @@ import json
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 bag_files_list = [
-    "MPC_dynamic.bag", 
+    # "MPC_dynamic.bag", 
     "MPC_lr_dynamic.bag", 
     "MPC_hr_dynamic.bag",
+    "MPC_hr_dynamic_out_FOV.bag",
     "MPC_dp_dynamic.bag",
-    "APF_dynamic.bag"
+    "MPC_dp_dynamic_out_FOV.bag",
+    # "APF_dynamic.bag"
 ]
 
 # Parametri footprint / plotting (adattati dal primo script)
@@ -47,8 +49,10 @@ radius_mapping = {
 legend_mapping = {
     "MPC_dynamic.bag" : "MPC", 
     "MPC_lr_dynamic.bag": "MPC_{lr}", 
-    "MPC_hr_dynamic.bag": "MPC_{hr}", 
-    "MPC_dp_dynamic.bag": "MPC_{dp}",
+    "MPC_hr_dynamic.bag": "MPC_{hr-no-pers}", 
+    "MPC_dp_dynamic.bag": "MPC_{dp-no-pers}",
+    "MPC_hr_dynamic_out_FOV.bag": "MPC_{hr-fov}", 
+    "MPC_dp_dynamic_out_FOV.bag": "MPC_{dp-fov}",
     "APF_dynamic.bag" : "APF"
 }
 
@@ -309,7 +313,7 @@ def plot_multi_trajectory(all_data):
 
 
 
-def plot_trajectory_keyframes(all_data, T_END=50, DT_FOOTSTEP=4, cols=4):
+def plot_trajectory_keyframes(all_data, T_END=42, DT_FOOTSTEP=6, cols=4):
     """
     Genera keyframes per ostacoli DINAMICI.
     Colori specifici per Person e Rover, con legenda unificata (patch + bordo).
@@ -468,14 +472,17 @@ def plot_velocities(all_data):
 
         # --- Subplot Velocità Lineare (v) ---
         axs[i, 0].plot(t, lin, color='blue', linewidth=1.5)
-        # Y-label con nome esperimento e variabile v
-        axs[i, 0].set_ylabel(rf'$\mathrm{{{label_name}}}$', fontsize=11)
+        axs[i, 0].set_ylabel(rf'$\mathrm{{{label_name}}}$' + '\n' + r'$v\ [\mathrm{m/s}]$')
         axs[i, 0].grid(True, linestyle=':', alpha=0.6)
+        axs[i, 0].set_ylim([-0.1, 0.6])
+        axs[i, 0].set_xlim([0, 50])
 
         # --- Subplot Velocità Angolare (omega) ---
         axs[i, 1].plot(t, ang, color='red', linewidth=1.5)
         axs[i, 1].set_ylabel(r'$\omega\ [\mathrm{rad/s}]$', fontsize=11)
         axs[i, 1].grid(True, linestyle=':', alpha=0.6)
+        axs[i, 1].set_ylim([-2, 2])
+        axs[i, 1].set_xlim([0, 50])
 
     # Etichette asse X solo sull'ultima riga per pulizia
     axs[-1, 0].set_xlabel(r'$t\ [\mathrm{s}]$', fontsize=12)
@@ -592,7 +599,7 @@ def plot_average_inference_times(all_data):
     ax.grid(True, axis='y', linestyle='--', alpha=0.6)
     
     # Ottimizzazione limiti asse Y per fare spazio alle annotazioni
-    ax.set_ylim(0, max(means) * 1.4) 
+    ax.set_ylim(0, 50) 
     
     plt.tight_layout()
     plt.show()
@@ -785,7 +792,7 @@ if __name__ == "__main__":
     if all_experiments_results:
         # plot_multi_trajectory(all_experiments_results)
         plot_trajectory_keyframes(all_data=all_experiments_results)
-        # plot_velocities(all_experiments_results)
+        plot_velocities(all_experiments_results)
         plot_velocities_combined(all_experiments_results)
         plot_distances_by_obstacles(all_experiments_results)
         # plot_radial_velocities(all_experiments_results)

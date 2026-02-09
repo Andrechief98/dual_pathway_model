@@ -308,133 +308,101 @@ def plot_multi_trajectory(all_data):
 
 
 
-
-def plot_trajectory_keyframes(all_data, T_END=50, DT_FOOTSTEP=4, cols=4):
+def plot_trajectory_keyframes(all_data, num_keyframes=5, cols=5):
     """
-    Genera keyframes per ostacoli DINAMICI.
-    Colori specifici per Person e Rover, con legenda unificata (patch + bordo).
+    Genera keyframes dinamici: ogni riga rappresenta un bag file diverso.
+    Usa i dati degli ostacoli specifici di ogni bag.
     """
-    items_to_plot = list(all_data.items())
-    if not items_to_plot: return
-
-    checkpoint_times = np.arange(0, T_END + 1e-6, DT_FOOTSTEP)
-    num_frames = len(checkpoint_times)
-    rows = int(np.ceil(num_frames / cols))
-
-    fig, axs = plt.subplots(rows, cols, figsize=(5 * cols, 7 * rows), squeeze=False)
-    fig.suptitle(r'$\mathrm{Robot\ Trajectory\ Evolution}$', fontsize=16, y=0.98)
+    bag_names = list(all_data.keys())
+    num_bags = len(bag_names)
+    
+    fig, axs = plt.subplots(num_bags, cols, figsize=(4 * cols, 5 * num_bags), squeeze=False)
+    fig.suptitle(r'$\mathrm{Multi-Scenario\ Trajectory\ Evolution\ (Per-Bag\ Obstacles)}$', fontsize=20, y=0.99)
 
     colors_robot = plt.cm.get_cmap('tab10').colors
-    axs_flat = axs.flatten()
-    
-    # Mappatura colori specifica per ostacoli dinamici
     obs_color_map = {
-        'Person': 'skyblue',
-        'Rover': 'lightgray'
+        'Person': 'skyblue', 
+        'Rover': 'lightgray', 
+        'Cylinder': 'orange', 
+        'Cardboard box': 'bisque'
     }
 
-    # Dizionario per la legenda globale
-    legend_dict = {}
-
-    for j, t_val in enumerate(checkpoint_times):
-        ax = axs_flat[j]
+    for row_idx, bag_name in enumerate(bag_names):
+        data = all_data[bag_name]
+        df_r = data['robot_path']
+        obs_paths = data['obstacle_paths']
         
-        # --- 1. Plot Robot Paths (Traiettorie e Footprint) ---
-        for i, (file_name, data) in enumerate(items_to_plot):
-            robot_color = colors_robot[i % 10]
-            df_r = data['robot_path']
-            
-            if df_r is not None and not df_r.empty:
-                times = df_r['time'].to_numpy()
-                idx_end = (np.abs(times - t_val)).argmin()
-                df_curr = df_r.iloc[:idx_end + 1]
+        if df_r.empty: 
+            continue
+        
+        # Gestione del nome per la label (evita il backslash nella f-string)
+        display_name = legend_mapping.get(bag_name, bag_name).replace("_", r"\_")
+        label_bag = rf"$\mathrm{{{display_name}}}$"
+        
+        # Conversione tempi a numpy
+        times_r_full = df_r['time'].to_numpy()
+        t_max = times_r_full.max()
+        checkpoint_times = np.linspace(0, t_max, num_keyframes)
+        
+        robot_color = colors_robot[row_idx % 10]
 
-                if not df_curr.empty:
-                    xr, yr = df_curr['x'].to_numpy(), df_curr['y'].to_numpy()
-                    # Traiettoria robot
-                    line, = ax.plot(xr, yr, color=robot_color, linewidth=2.5, alpha=0.8, zorder=5)
-                    
-                    # Ellisse robot (posizione attuale)
-                    curr_pos = df_curr.iloc[-1]
-                    label_name = rf'$\mathrm{{{legend_mapping[file_name]}}}$'
-                    
-                    ell = patches.Ellipse(
-                        (curr_pos['x'], curr_pos['y']), 
-                        width=2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B,
-                        angle=curr_pos['yaw'], 
-                        color=robot_color, fill=True, alpha=0.5
-                    )
-                    ax.add_patch(ell)
+        for col_idx, t_val in enumerate(checkpoint_times):
+            ax = axs[row_idx, col_idx]
+            
+            # --- 1. Plot Robot Path ---
+            idx_r = (np.abs(times_r_full - t_val)).argmin()
+            df_r_curr = df_r.iloc[:idx_r + 1]
 
-                    if label_name not in legend_dict:
-                        legend_dict[label_name] = line
-
-        # --- 2. Plot Ostacoli Dinamici ---
-        # Prendiamo i percorsi degli ostacoli dal primo esperimento
-        first_exp_data = items_to_plot[0][1]
-        for obs_label, df_o in first_exp_data['obstacle_paths'].items():
-            if df_o is None or df_o.empty: continue
-            
-            # Colore specifico
-            obs_color = obs_color_map.get(obs_label, 'bisque')
-            
-            # Logica nearest neighbor per la traiettoria dell'ostacolo
-            t_obs = df_o['time'].to_numpy()
-            idx_o = (np.abs(t_obs - t_val)).argmin()
-            df_o_curr = df_o.iloc[:idx_o + 1]
-            
-            if not df_o_curr.empty:
-                xo, yo = df_o_curr['x'].to_numpy(), df_o_curr['y'].to_numpy()
-                radius = radius_mapping.get(obs_label, 0.3)
+            if not df_r_curr.empty:
+                ax.plot(df_r_curr['x'].to_numpy(), df_r_curr['y'].to_numpy(), 
+                        color=robot_color, linewidth=2, alpha=0.7, zorder=5)
                 
-                # Scia dell'ostacolo (linea punteggiata)
-                ax.plot(xo, yo, color=obs_color, linestyle=':', linewidth=2, alpha=0.6, zorder=2)
-                
-                # Posizione attuale ostacolo (Cerchio con bordo)
-                curr_o = df_o_curr.iloc[-1]
-                circ = plt.Circle(
-                    (curr_o['x'], curr_o['y']), radius, 
-                    facecolor=obs_color, edgecolor=obs_color, 
-                    linewidth=1.5, 
-                    alpha=0.8, 
-                    zorder=3
+                curr_r = df_r_curr.iloc[-1]
+                ell = patches.Ellipse(
+                    (curr_r['x'], curr_r['y']), 
+                    width=2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B,
+                    angle=curr_r['yaw'], color=robot_color, fill=True, alpha=0.5, zorder=6
                 )
-                ax.add_patch(circ)
+                ax.add_patch(ell)
 
-                # Aggiunta alla legenda (Proxy Artist per mostrare patch + bordo)
-                obs_key = rf'${obs_label}$'
-                if obs_key not in legend_dict:
-                    legend_dict[obs_key] = patches.Patch(
-                        facecolor=obs_color, edgecolor=obs_color, 
-                        alpha=0.6, label=obs_key
-                    )
+            # --- 2. Plot Ostacoli SPECIFICI di questo bag ---
+            for obs_label, df_o in obs_paths.items():
+                if df_o is None or df_o.empty: 
+                    continue
+                
+                obs_col = obs_color_map.get(obs_label, 'bisque')
+                t_obs_full = df_o['time'].to_numpy()
+                
+                idx_o = (np.abs(t_obs_full - t_val)).argmin()
+                df_o_curr = df_o.iloc[:idx_o + 1]
+                
+                if not df_o_curr.empty:
+                    ax.plot(df_o_curr['x'].to_numpy(), df_o_curr['y'].to_numpy(), 
+                            color=obs_col, linestyle=':', linewidth=1.5, alpha=0.6, zorder=2)
+                    
+                    curr_o = df_o_curr.iloc[-1]
+                    radius = radius_mapping.get(obs_label, 0.3)
+                    circ = plt.Circle((curr_o['x'], curr_o['y']), radius, facecolor=obs_col, 
+                                      edgecolor='black', linewidth=0.8, alpha=0.8, zorder=3)
+                    ax.add_patch(circ)
 
-        # --- 3. Formattazione Subplot ---
-        ax.set_xlabel(r'$X\ [\mathrm{m}]$', fontsize=12)
-        ax.set_ylabel(r'$Y\ [\mathrm{m}]$', fontsize=12)
-        ax.set_title(rf'$\mathbf{{t = {t_val:.1f}\ s}}$', fontsize=12, y=-0.5)
-        
-        ax.set_aspect('equal')
-        ax.set_xlim([-1.5, 11]) 
-        ax.set_ylim([-4, 4])
-        ax.grid(True, linestyle='--', alpha=0.5)
+            # --- 3. Formattazione ---
+            if row_idx == 0:
+                ax.set_title(rf'$\mathbf{{Keyframe\ {col_idx+1}}}$', fontsize=14)
+            if col_idx == 0:
+                ax.set_ylabel(label_bag, fontsize=14, fontweight='bold')
+            
+            ax.set_aspect('equal')
+            ax.set_xlim([-1.5, 11]) 
+            ax.set_ylim([-4, 4])
+            ax.grid(True, linestyle='--', alpha=0.4)
+            
+            ax.text(0.05, 0.05, rf'$t={t_val:.1f}s$', transform=ax.transAxes, 
+                    fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
 
-    # Nascondi subplot vuoti
-    for k in range(num_frames, len(axs_flat)):
-        axs_flat[k].axis('off')
-
-    # --- 4. Legenda Globale ---
-    fig.legend(legend_dict.values(), legend_dict.keys(), 
-               loc='lower center', 
-               ncol=min(len(legend_dict), 7), 
-               fontsize='large', 
-               frameon=True, 
-               bbox_to_anchor=(0.5, 0.02))
-
-    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
-    fig.subplots_adjust(hspace=0.45, wspace=0.3) 
-    
+    plt.tight_layout(rect=[0, 0.03, 1, 0.97])
     plt.show()
+
 
 
 def plot_velocities(all_data):

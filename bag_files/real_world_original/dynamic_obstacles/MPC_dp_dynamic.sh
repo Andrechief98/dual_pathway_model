@@ -29,7 +29,7 @@ open_ros_window() {
 }
 
 # 1. Simulation - amygdala
-open_ros_window "SIMULATION" "roslaunch mpc_planner test_architecture.launch use_warm_start:=true high_road_influence:=0.5 test:='dp' experiment:=''"
+open_ros_window "SIMULATION" "roslaunch mpc_planner test_architecture.launch use_warm_start:=true high_road_influence:=0.5 test:='dp' experiment:='dynamic'"
 sleep 10
 
 # 2. Thalamus
