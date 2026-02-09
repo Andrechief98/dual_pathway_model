@@ -10,7 +10,7 @@ import math
 from collections import defaultdict
 import json
 
-# --- Configuration ---
+# Path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 bag_files_list = [
@@ -21,12 +21,9 @@ bag_files_list = [
     "APF_static.bag"
 ] 
 
-ROBOT_SEMI_AXIS_A = 0.8  # Lunghezza (asse x locale)
-ROBOT_SEMI_AXIS_B = 0.4  # Larghezza (asse y locale)
+ROBOT_SEMI_AXIS_A = 0.8  # X axis
+ROBOT_SEMI_AXIS_B = 0.4  # Y axis
 
-DT_FOOTPRINT = 2.0       # Ogni quanti secondi disegnare la sagoma
-
-# 1. Mapping Nomi: {Nome_nel_bag: Nome_per_il_plot}
 model_mapping = {
     "mir"           : "MiR",
     "cylinder"      : "Cylinder", 
@@ -35,7 +32,6 @@ model_mapping = {
     "cardboard_box" : "Cardboard box"
 }
 
-# 2. Definizione Raggi: {Nome_per_il_plot: Raggio_in_metri}
 radius_mapping = {
     "Cylinder"      : 0.3,              # Raggio cilindro
     "Rover"         : 1.0,                # Raggio rover
@@ -58,50 +54,77 @@ def quaternion_to_yaw(q):
     return math.atan2(siny_cosp, cosy_cosp)
 
 
-def extract_data_for_plotting(bag_file_path, model_map):
+def extract_data_from_bag(bag_file_path, model_map):
     data = {
-        'robot_path': [], # List of {time, x, y}
-        'velocity': [],   # List of {time, linear, angular}
-        'obstacles': {},   # Dict of {label: {x, y}}
-        'fear_levels': defaultdict(list) # { 'Obstacle_A': [{'time': t, 'val': v}, ...], ... }
+        'robot_path'    : [],                       # List of dictionary: {time, x, y}
+        'velocity'      : [],                       # List of dictionary: {time, linear, angular}
+        'obstacles'     : {},                       # Dict of {label: {x, y}}
+        'fear_levels'   : defaultdict(list),        # { 'Obstacle_A': [{'time': t, 'val': v}, ...], ... }
+        'mpc_stats'     : [],
+        'low_road_risk' : [],
+        'high_road_risk': []
         }
     
     print(f"Reading: {os.path.basename(bag_file_path)}")
+
     try:
         with rosbag.Bag(bag_file_path, 'r') as bag:
             start_time = None
+
+            topics_list=[
+                '/optitracker/model_states', 
+                '/cmd_vel', 
+                '/fearlevel', 
+                '/mpc/statistics',
+                '/amygdala/lowroad/risks',
+                '/amygdala/highroad/risks'
+                ]
             
-            for topic, msg, t in bag.read_messages(topics=['/optitracker/model_states', '/cmd_vel', '/fearlevel']):
-                if start_time is None: start_time = t.to_sec()
+            for topic, msg, t in bag.read_messages(topics_list):
+
+                # For each bag topic, we consider the first time instant as start_time
+                if start_time is None: 
+                    start_time = t.to_sec()
+
+                # We extract the relative time of each data with respect the first time instant
                 rel_time = t.to_sec() - start_time
                 
+                # Extraction of robot and obstacles paths
                 if topic == '/optitracker/model_states':
                     for i, name in enumerate(msg.name):
                         if name in model_map:
                             label = model_map[name]
                             pose = msg.pose[i]
+
                             if name == "mir":
-                                # Estraiamo posizione e orientamento (Yaw)
+                                # Extraction and convertion of robot orientation (from quaternion to radians)
                                 yaw = quaternion_to_yaw(pose.orientation)
-                                data['robot_path'].append({
-                                    'time': rel_time, 
-                                    'x': pose.position.x, 
-                                    'y': pose.position.y,
-                                    'yaw': math.degrees(yaw) # Matplotlib usa i gradi
-                                })
+                                data['robot_path'].append(
+                                    {
+                                        'time'  :   rel_time, 
+                                        'x'     :   pose.position.x, 
+                                        'y'     :   pose.position.y,
+                                        'yaw'   :   math.degrees(yaw) # Matplotlib usa i gradi
+                                    }
+                                )
                             elif label not in data['obstacles']:
+                                # Extraction of obstacle position
                                 data['obstacles'][label] = {
-                                    'x': pose.position.x, 
-                                    'y': pose.position.y
+                                    'x'     :       pose.position.x, 
+                                    'y'     :       pose.position.y
                                 }
                 
+                # Extraction of robot velocities
                 elif topic == '/cmd_vel':
-                    data['velocity'].append({
-                        'time': rel_time,
-                        'linear': msg.linear.x,
-                        'angular': msg.angular.z
-                    })
+                    data['velocity'].append(
+                        {
+                            'time'      :       rel_time,
+                            'linear'    :       msg.linear.x,
+                            'angular'   :       msg.angular.z
+                        }
+                    )
 
+                # Extraction of robot fear level
                 elif topic == '/fearlevel':
                     try:
                         fear_dict = json.loads(msg.data)
@@ -113,6 +136,28 @@ def extract_data_for_plotting(bag_file_path, model_map):
                     except Exception as e:
                         print(e)
                         continue
+                
+                # Extraction of mpc execution time and statistics
+                elif topic == '/mpc/statistics':
+                    data['mpc_stats'].append({
+                        'time': rel_time,
+                        'execution_time': msg.execution_time, 
+                        'iterations': msg.iterations,
+                        'status': msg.status
+                    })
+
+                elif topic == '/amygdala/lowroad/risks':
+                    objects_risks = json.loads(msg.data)
+                    data['low_road_risk'].append({
+                        'time': rel_time,
+                        'risks': objects_risks
+                    })
+                elif topic == '/amygdala/highroad/risks':
+                    objects_risks = json.loads(msg.data)
+                    data['high_road_risk'].append({
+                        'time': rel_time,
+                        'risks': objects_risks
+                    })
 
     except Exception as e:
         print(f"Error: {e}")
@@ -120,21 +165,24 @@ def extract_data_for_plotting(bag_file_path, model_map):
 
 
     # Convert to DataFrames
-    data['robot_path'] = pd.DataFrame(data['robot_path'])
-    data['velocity'] = pd.DataFrame(data['velocity'])
+    data['robot_path']  =   pd.DataFrame(data['robot_path'])
+    data['velocity']    =   pd.DataFrame(data['velocity'])
+    data['mpc_stats']   =   pd.DataFrame(data['mpc_stats'])
     for label in data['fear_levels']:
         data['fear_levels'][label] = pd.DataFrame(data['fear_levels'][label])
     return data
 
-def plot_multi_trajectory(all_data):
+
+
+def plot_multi_trajectory(all_data, DT_FOOTPRINT = 2.0 ):
     fig, ax = plt.subplots(figsize=(12, 10))
     cmap = plt.get_cmap('tab10')
     
-    # --- Plot Traiettorie Robot ---
+    # PLOT ROBOT TRAJECTORY
     for i, (file_name, data) in enumerate(all_data.items()):
         df_robot = data['robot_path']
         
-        # Verifica se il DataFrame ha i dati necessari
+        # Check Dataframe
         if df_robot is not None and not df_robot.empty and 'x' in df_robot.columns:
             x_vals = df_robot['x'].to_numpy()
             y_vals = df_robot['y'].to_numpy()
@@ -142,20 +190,21 @@ def plot_multi_trajectory(all_data):
             time_vals = df_robot['time'].to_numpy()
             color = cmap(i % 10)
             
-            # Traiettoria
+            # Trajectory plot
             label_name = legend_mapping[file_name]
             ax.plot(
-                x_vals, 
-                y_vals, 
-                label=rf'${label_name}$',
-                color=color, 
-                linewidth=2, 
-                zorder=2
+                    x_vals, 
+                    y_vals, 
+                    label       =   rf'${label_name}$',
+                    color       =   color, 
+                    linewidth   =   2, 
+                    zorder      =   2
                 )
             
-            # Plot Ellissi (Footprints) ogni DT_FOOTPRINT secondi
-            max_t = time_vals.max()
+            # Ellipsoid plot (footprints - each DT_FOOTPRINT seconds)
+            max_t = time_vals.max()      
             checkpoint_times = np.arange(0, max_t, DT_FOOTPRINT)
+
             for t_target in checkpoint_times:
                 idx = (np.abs(time_vals - t_target)).argmin()
                 ellipse = patches.Ellipse(
@@ -170,20 +219,19 @@ def plot_multi_trajectory(all_data):
                 )
                 ax.add_patch(ellipse)
 
-            # Ellisse finale
+            # Final ellipsoid
             final_ellipse = patches.Ellipse(
                 (x_vals[-1], y_vals[-1]), 
-                width=2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B, 
-                angle=yaw_vals[-1], 
-                color=color, 
-                fill=True, 
-                alpha=0.2, 
-                # label=f'Robot Final {file_name}'
+                width                       =       2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B, 
+                angle                       =       yaw_vals[-1], 
+                color                       =       color, 
+                fill                        =       True, 
+                alpha                       =       0.2, 
             )
             ax.add_patch(final_ellipse)
             ax.scatter(x_vals[-1], y_vals[-1], color=color, marker='x', s=50)
 
-    # --- Plot Ostacoli (Prendiamo quelli del primo esperimento valido) ---
+    # PLOT OBSTACLES POSITIONS
     first_exp_data = list(all_data.values())[0]
     obstacles_dict = first_exp_data.get('obstacles', {}) # Accedi correttamente alla chiave 'obstacles'
 
@@ -191,10 +239,10 @@ def plot_multi_trajectory(all_data):
         x, y = pos['x'], pos['y']
         radius = radius_mapping.get(label, 0.0)
         
-        # Centro dell'ostacolo
+        # Center of the obstacle
         ax.scatter(x, y, color='black', marker='X', s=100, zorder=5)
         
-        # Disegno della circonferenza di sicurezza
+        # Circumference of the obstacle constraint
         if radius > 0:
             circle = plt.Circle((x, y), radius, color='red', fill=True, alpha=0.1, zorder=1)
             edge = plt.Circle((x, y), radius, color='red', fill=False, linestyle='-', linewidth=1.5, zorder=3)
@@ -214,11 +262,11 @@ def plot_multi_trajectory(all_data):
 
 
 
-def plot_trajectory_keyframes(all_data, T_END=40, DT_FOOTSTEP=4, cols=4):
+def plot_trajectory_keyframes(all_data, T_END=35, DT_FOOTPRINT=5, cols=4):
     items_to_plot = list(all_data.items())
     if not items_to_plot: return
 
-    checkpoint_times = np.arange(0, T_END + 1e-6, DT_FOOTSTEP)
+    checkpoint_times = np.arange(0, T_END + 1e-6, DT_FOOTPRINT)
     num_frames = len(checkpoint_times)
     rows = int(np.ceil(num_frames / cols))
 
@@ -342,15 +390,21 @@ def plot_velocities(all_data):
         lin = df_vel['linear'].to_numpy()
         ang = df_vel['angular'].to_numpy()
 
+        label_name = legend_mapping[file_name]
+
         # Subplot Velocità Lineare
         axs[i, 0].plot(t, lin, color='blue')
-        axs[i, 0].set_ylabel(f'{file_name}\nLin Vel [m/s]')
+        axs[i, 0].set_ylabel(rf'$\mathrm{{{label_name}}}$' + '\n' + r'$v\ [\mathrm{m/s}]$')
         axs[i, 0].grid(True, alpha=0.3)
+        axs[i, 0].set_ylim([-0.1, 0.6])
+        axs[i, 0].set_xlim([0, 40])
 
         # Subplot Velocità Angolare
         axs[i, 1].plot(t, ang, color='red')
-        axs[i, 1].set_ylabel('Ang Vel [rad/s]')
+        axs[i, 1].set_ylabel(rf'$\mathrm{{{label_name}}}$' + '\n' + r'$\omega\ [\mathrm{rad/s}]$')
         axs[i, 1].grid(True, alpha=0.3)
+        axs[i, 1].set_ylim([-2, 2])
+        axs[i, 1].set_xlim([0, 40])
 
     axs[-1, 0].set_xlabel('Time [s]')
     axs[-1, 1].set_xlabel('Time [s]')
@@ -369,23 +423,6 @@ def plot_combined_velocities(all_data):
         
         t = df_vel['time'].to_numpy()
         lin = df_vel['linear'].to_numpy()
-
-        # Deleting the single outlier peak
-        if file_name == "MPC_dp_static.bag":
-            # 0.09442207 0.09442207
-            lin_cleaned = lin.copy()
-    
-            # Cicliamo dal secondo elemento in poi
-            for i in range(1, len(lin_cleaned)):
-                val = lin_cleaned[i]
-                
-                # Check: se il valore è compreso tra 0 (escluso) e 0.5 (escluso)
-                if 0 < val < 0.45:
-                    # Sostituisci con il valore precedente (che a sua volta 
-                    # potrebbe essere già stato "pulito" nei passi precedenti)
-                    lin_cleaned[i] = lin_cleaned[i-1]
-            
-            lin = lin_cleaned
         ang = df_vel['angular'].to_numpy()
         
         label_name = legend_mapping[file_name]
@@ -413,9 +450,6 @@ def plot_combined_velocities(all_data):
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
-
-
-
 
 def plot_distances_by_obstacle(all_data):
     sample_bag = next(iter(all_data.values()))
@@ -520,6 +554,7 @@ def plot_fear_comparison(all_data):
         ax.set_title(rf'${label_name}$', loc='center', fontsize=14)
         ax.set_ylabel(rf'$F_t$')
         ax.set_ylim(-0.05, 1.05)
+        ax.set_xlim(0, 40)
         ax.grid(True, linestyle=':', alpha=0.7)
         ax.legend(loc='upper right')
 
@@ -532,26 +567,275 @@ def plot_fear_comparison(all_data):
     
     plt.show()
 
+def plot_average_inference_times(all_data):
+    """
+    Crea un grafico a barre che confronta i tempi medi di esecuzione (inferenza)
+    di ciascun algoritmo, includendo le barre di errore (deviazione standard).
+    """
+    labels = []
+    means = []
+    stds = []
+    
+    # Estraiamo i dati dal dizionario all_data
+    for file_name, data in all_data.items():
+        df_mpc = data.get('mpc_stats')
+        
+        if df_mpc is not None and not df_mpc.empty:
+            # Convertiamo in millisecondi per una migliore leggibilità (assumendo siano in secondi)
+            exec_times_ms = df_mpc['execution_time'].to_numpy() * 1000 
+            
+            means.append(np.mean(exec_times_ms))
+            stds.append(np.std(exec_times_ms))
+            labels.append(rf'$\mathrm{{{legend_mapping.get(file_name, file_name)}}}$')
+        else:
+            print(f"Avviso: Dati MPC non trovati per {file_name}")
+
+    if not means:
+        print("Nessun dato di statistica MPC disponibile per il plot.")
+        return
+
+    # --- Plotting ---
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Usiamo una palette di colori coerente
+    colors = plt.cm.tab10(np.linspace(0, 1, len(labels)))
+    
+    bars = ax.bar(labels, means, yerr=stds, capsize=10, color=colors, alpha=0.8, edgecolor='black', linewidth=1.2)
+    
+    # Aggiungiamo i valori numerici sopra le barre per precisione
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f} ms',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 12),  # offset verticale di 12 punti
+                    textcoords="offset points",
+                    ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+    # Formattazione in stile LaTeX
+    ax.set_title(r'$\mathrm{MPC\ Average\ Inference\ Time\ Comparison}$', fontsize=16)
+    ax.set_ylabel(r'$\mathrm{Execution\ Time\ [ms]}$', fontsize=12)
+    ax.set_xlabel(r'$\mathrm{Algorithm}$', fontsize=12)
+    ax.grid(True, axis='y', linestyle='--', alpha=0.6)
+    
+    # Ottimizzazione limiti asse Y per fare spazio alle annotazioni
+    ax.set_ylim(0, 100) 
+    
+    plt.tight_layout()
+    plt.show()
+
+    # Riepilogo testuale a terminale
+    print("\n--- INFERENCE TIME SUMMARY (ms) ---")
+    for i, label in enumerate(labels):
+        print(f"{label}: Mean = {means[i]:.3f} ms | Std = {stds[i]:.3f} ms")
+
+def plot_fear_riemann_integration(all_data):
+    """
+    Calcola l'integrale del Fear Level usando la Somma di Riemann (Rettangoli).
+    Versione compatibile con vecchie versioni di Matplotlib.
+    """
+    # Struttura: { ostacolo: { algoritmo: area_totale } }
+    integration_results = defaultdict(dict)
+    
+    # 1. Calcolo dell'integrale
+    for file_name, data in all_data.items():
+        fear_data = data.get('fear_levels', {})
+        bag_label = legend_mapping.get(file_name, file_name)
+        
+        for obs_label, df in fear_data.items():
+            if not df.empty and len(df) > 1:
+                times = df['time'].to_numpy()
+                values = df['value'].to_numpy()
+                
+                # dt = t_{i+1} - t_i
+                dts = np.diff(times)
+
+                # Somma di Riemann (Rettangolo sinistro): sum( f[i] * dt[i] )
+                riemann_sum = np.sum(values[:-1] * dts)
+                integration_results[obs_label][bag_label] = riemann_sum
+
+    if not integration_results:
+        print("Dati insufficienti per il calcolo della Somma di Riemann.")
+        return
+
+    # 2. Setup del Plot
+    obstacles = list(integration_results.keys())
+    # Estraiamo tutti gli algoritmi unici effettivamente presenti nei risultati
+    all_algs = set()
+    for obs_res in integration_results.values():
+        all_algs.update(obs_res.keys())
+    
+    # Ordiniamo gli algoritmi in base alla tua lista originale per coerenza
+    algorithms = [legend_mapping[b] for b in bag_files_list if legend_mapping.get(b) in all_algs]
+    
+    fig, ax = plt.subplots(figsize=(12, 7))
+    x = np.arange(len(obstacles))
+    width = 0.15 
+    cmap = plt.get_cmap('tab10')
+
+    for i, alg in enumerate(algorithms):
+        vals = [integration_results[obs].get(alg, 0.0) for obs in obstacles]
+        offset = i * width - (len(algorithms) * width) / 2 + width/2
+        
+        # Creazione delle barre
+        bars = ax.bar(x + offset, vals, width, label=rf'${alg}$', color=cmap(i), edgecolor='black', alpha=0.8)
+        
+        # --- FIX: Sostituzione di ax.bar_label con un ciclo manuale ---
+        for bar in bars:
+            height = bar.get_height()
+            if height > 0: # Evitiamo di scrivere 0.00 su barre inesistenti
+                ax.text(bar.get_x() + bar.get_width()/2., height + 0.01,
+                        f'{height:.2f}', ha='center', va='bottom', fontsize=9)
+
+    # 3. Formattazione
+    ax.set_title(r'$\mathrm{Cumulative\ Fear\ Level\ (Riemann\ Sum)}$', fontsize=16)
+    ax.set_ylabel(r'$\mathrm{Accumulated\ Fear}$', fontsize=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels([rf'$\mathrm{{{o}}}$' for o in obstacles])
+    
+    ax.legend(title=r'$\mathrm{Algorithms}$', loc='upper right', frameon=True)
+    ax.grid(True, axis='y', linestyle='--', alpha=0.5)
+    
+    # Aggiustiamo il limite Y per non far tagliare le scritte sopra le barre
+    current_ylim = ax.get_ylim()
+    ax.set_ylim(0, current_ylim[1] * 1.1)
+
+    plt.tight_layout()
+    plt.show()
+
+    # Output testuale per verifica
+    print("\n--- RIEMANN INTEGRATION SUMMARY (Per Obstacle) ---")
+    total_fear_by_alg = defaultdict(float)
+
+    for obs, algs in integration_results.items():
+        print(f"Obstacle: {obs}")
+        for alg, val in algs.items():
+            print(f"  > {alg}: {val:.4f}")
+            total_fear_by_alg[alg] += val
+
+    print("\n--- TOTAL CUMULATIVE FEAR PER ALGORITHM ---")
+    for alg in algorithms:
+        if alg in total_fear_by_alg:
+            print(f"  >> Total {alg}: {total_fear_by_alg[alg]:.4f}")
+    
+
+
+
+def plot_weighted_fear_risk(all_data):
+    """
+    Calcola l'Adaptiveness Index normalizzato:
+    Index = 1 - [ sum_obj( sum_i( HR_i * LR_i ) ) / R_max ]
+    dove R_max è il numero totale di istanti temporali (sommatoria di 1).
+    """
+    # 1. Definizione pesi High Road (HR) fissi per oggetto
+    hr_weights = {
+        "Person": 0.6,
+        "Rover": 0.5,
+        "Cardboard box": 0.2,
+    }
+
+    # Risultati finali per algoritmo
+    final_indices = {}
+    # Per il log testuale
+    stats_summary = []
+
+    for file_name, data in all_data.items():
+        lr_data_list = data.get('low_road_risk', [])
+        bag_label = legend_mapping.get(file_name, file_name)
+        
+        if not lr_data_list:
+            continue
+
+        total_weighted_risk = 0.0
+        # R_max è la sommatoria di 1 per ogni istante di tempo registrato
+        r_max = float(len(lr_data_list))
+        
+        for entry in lr_data_list:
+            risks = entry['risks']
+            for obs_name, lr_val in risks.items():
+                clean_label = model_mapping.get(obs_name, obs_name)
+                hr_val = hr_weights.get(clean_label, 1.0)
+                
+                # Sommatoria HR * LR
+                total_weighted_risk += (hr_val * lr_val)
+
+        # 2. Calcolo Formula: 1 - (Rischio_Totale / R_max)
+        # Assicuriamoci che r_max > 0 per evitare divisioni per zero
+        if r_max > 0:
+            index_val = 1.0 - (total_weighted_risk / r_max)
+            # Clipping di sicurezza nel range [0, 1]
+            index_val = max(0.0, min(1.0, index_val))
+        else:
+            index_val = 0.0
+
+        final_indices[bag_label] = index_val
+        stats_summary.append({
+            'alg': bag_label,
+            'risk': total_weighted_risk,
+            'r_max': r_max,
+            'index': index_val
+        })
+
+    if not final_indices:
+        print("Nessun dato disponibile per calcolare l'indice.")
+        return
+
+    # --- 3. Plotting ---
+    algorithms = [legend_mapping[b] for b in bag_files_list if legend_mapping.get(b) in final_indices]
+    vals = [final_indices[alg] for alg in algorithms]
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    cmap = plt.get_cmap('tab10')
+    
+    bars = ax.bar(algorithms, vals, color=[cmap(i) for i in range(len(algorithms))], 
+                  edgecolor='black', alpha=0.8, width=0.5)
+    
+    # Etichette sopra le barre
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + 0.01,
+                f'{height:.4f}', ha='center', va='bottom', fontsize=11, fontweight='bold')
+
+    ax.set_title(r'$\mathbf{Adaptiveness\ Index:\ } 1 - \frac{\sum_{j} \sum_{i} (HR_j \cdot LR_{j,i})}{R_{max}}$', fontsize=16)
+    ax.set_ylabel(r'$\mathrm{Score\ [0-1]}$', fontsize=12)
+    ax.set_ylim(0, 1.1) # Range fisso 0-1 con un po' di margine sopra
+    ax.grid(True, axis='y', linestyle='--', alpha=0.4)
+
+    plt.tight_layout()
+    plt.show()
+
+    # --- 4. Riepilogo per Overleaf ---
+    print("\n" + "="*60)
+    print(f"{'ALGORITHM':<15} | {'SUM(HR*LR)':<12} | {'R_max (ticks)':<12} | {'INDEX':<10}")
+    print("-" * 60)
+    for s in stats_summary:
+        print(f"{s['alg']:<15} | {s['risk']:<12.2f} | {s['r_max']:<12.0f} | {s['index']:<10.4f}")
+    print("="*60)
 
 if __name__ == "__main__":
     all_experiments_results = {}
 
     for file_name in bag_files_list:
-        path_completo = os.path.join(script_dir, file_name)
-        if os.path.exists(path_completo):
-            data = extract_data_for_plotting(path_completo, model_mapping)
+        complete_path = os.path.join(script_dir, file_name)
+        if os.path.exists(complete_path):
+            data = extract_data_from_bag(complete_path, model_mapping)
             if data: all_experiments_results[file_name] = data
 
     if all_experiments_results:
-        plot_multi_trajectory(all_experiments_results)
+        # plot_multi_trajectory(all_experiments_results)
         
-        plot_trajectory_keyframes(all_data=all_experiments_results)
+        # plot_trajectory_keyframes(all_data=all_experiments_results)
         
         # plot_velocities(all_experiments_results)        
         
-        plot_combined_velocities(all_experiments_results)
+        # plot_combined_velocities(all_experiments_results)
 
-        plot_distances_by_obstacle(all_experiments_results)
+        # plot_distances_by_obstacle(all_experiments_results)
         
-        plot_fear_comparison(all_experiments_results)
-        # plot_fear_phase_space(all_experiments_results)
+        # plot_fear_comparison(all_experiments_results)
+
+        # # plot_fear_phase_space(all_experiments_results)
+
+        # plot_average_inference_times(all_experiments_results)
+
+        plot_fear_riemann_integration(all_experiments_results)
+        plot_weighted_fear_risk(all_experiments_results)

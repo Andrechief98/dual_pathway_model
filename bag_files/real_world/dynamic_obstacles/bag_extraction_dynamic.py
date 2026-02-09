@@ -87,11 +87,11 @@ def extract_data_for_plotting(bag_file_path, model_map):
                        velocity (DataFrame ['time','linear','angular']),
                        fear_levels (dict label->DataFrame ['time','value'])
     """
-    raw = {'robot': [], 'obstacles': defaultdict(list), 'vel': [], 'fear': [], 'radial_vel': defaultdict(list)}
+    raw = {'robot': [], 'obstacles': defaultdict(list), 'vel': [], 'fear': [], 'radial_vel': defaultdict(list), 'mpc_stats':[]}
     try:
         with rosbag.Bag(bag_file_path, 'r') as bag:
             bag_start = None
-            for topic, msg, t in bag.read_messages(topics=['/optitracker/model_states', '/cmd_vel', '/thalamus/info', '/fearlevel']):
+            for topic, msg, t in bag.read_messages(topics=['/optitracker/model_states', '/cmd_vel', '/thalamus/info', '/fearlevel', '/mpc/statistics']):
                 if bag_start is None: bag_start = t.to_sec()
                 rel_t = t.to_sec() - bag_start
 
@@ -130,6 +130,14 @@ def extract_data_for_plotting(bag_file_path, model_map):
                                 v_rad = stats.get("radial_vel", 0.0)
                                 raw['radial_vel'][label].append({'t_raw': rel_t, 'value': v_rad})
                     except Exception: continue
+                
+                elif topic == '/mpc/statistics':
+                    raw['mpc_stats'].append({
+                        't_raw': rel_t,
+                        'execution_time': msg.execution_time, 
+                        'iterations': msg.iterations,
+                        'status': msg.status
+                    })
 
     except Exception as e:
         print(f"Error reading {bag_file_path}: {e}")
@@ -189,6 +197,15 @@ def extract_data_for_plotting(bag_file_path, model_map):
             df_rv['time'] = df_rv['t_raw'] - t_start
             radial_vel_df[label] = df_rv.reset_index(drop=True)
 
+    # Sincronizzazione mpc statistics
+    df_mpc = pd.DataFrame(raw['mpc_stats'])
+    if not df_mpc.empty:
+        df_mpc = df_mpc[df_mpc['t_raw'] >= t_start].copy()
+        df_mpc['time'] = df_mpc['t_raw'] - t_start
+        df_mpc = df_mpc.reset_index(drop=True)
+    else:
+        df_mpc = pd.DataFrame(columns=['t_raw', 'time', 'execution_time', 'iterations', 'status'])
+
     # convert to DataFrames
     fear_levels_df = {}
     for label, arr in fear_levels.items():
@@ -203,7 +220,8 @@ def extract_data_for_plotting(bag_file_path, model_map):
         'obstacle_paths': final_obstacles,
         'velocity': df_vel2,
         'fear_levels': fear_levels_df,
-        'radial_velocities': radial_vel_df
+        'radial_velocities': radial_vel_df,
+        'mpc_stats': df_mpc 
     }
 
 def plot_multi_trajectory(all_data):
@@ -522,7 +540,68 @@ def plot_velocities_combined(all_data):
     
     plt.show()
 
+
+def plot_average_inference_times(all_data):
+    """
+    Crea un grafico a barre che confronta i tempi medi di esecuzione (inferenza)
+    di ciascun algoritmo, includendo le barre di errore (deviazione standard).
+    """
+    labels = []
+    means = []
+    stds = []
     
+    # Estraiamo i dati dal dizionario all_data
+    for file_name, data in all_data.items():
+        df_mpc = data.get('mpc_stats')
+        
+        if df_mpc is not None and not df_mpc.empty:
+            # Convertiamo in millisecondi per una migliore leggibilità (assumendo siano in secondi)
+            exec_times_ms = df_mpc['execution_time'].to_numpy() * 1000 
+            
+            means.append(np.mean(exec_times_ms))
+            stds.append(np.std(exec_times_ms))
+            labels.append(rf'$\mathrm{{{legend_mapping.get(file_name, file_name)}}}$')
+        else:
+            print(f"Avviso: Dati MPC non trovati per {file_name}")
+
+    if not means:
+        print("Nessun dato di statistica MPC disponibile per il plot.")
+        return
+
+    # --- Plotting ---
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Usiamo una palette di colori coerente
+    colors = plt.cm.tab10(np.linspace(0, 1, len(labels)))
+    
+    bars = ax.bar(labels, means, yerr=stds, capsize=10, color=colors, alpha=0.8, edgecolor='black', linewidth=1.2)
+    
+    # Aggiungiamo i valori numerici sopra le barre per precisione
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f} ms',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 12),  # offset verticale di 12 punti
+                    textcoords="offset points",
+                    ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+    # Formattazione in stile LaTeX
+    ax.set_title(r'$\mathrm{MPC\ Average\ Inference\ Time\ Comparison}$', fontsize=16)
+    ax.set_ylabel(r'$\mathrm{Execution\ Time\ [ms]}$', fontsize=12)
+    ax.set_xlabel(r'$\mathrm{Algorithm}$', fontsize=12)
+    ax.grid(True, axis='y', linestyle='--', alpha=0.6)
+    
+    # Ottimizzazione limiti asse Y per fare spazio alle annotazioni
+    ax.set_ylim(0, max(means) * 1.4) 
+    
+    plt.tight_layout()
+    plt.show()
+
+    # Riepilogo testuale a terminale
+    print("\n--- INFERENCE TIME SUMMARY (ms) ---")
+    for i, label in enumerate(labels):
+        print(f"{label}: Mean = {means[i]:.3f} ms | Std = {stds[i]:.3f} ms")
+
 def plot_radial_velocities(all_data, skip=10):
     """
     Plotta la velocità radiale campionando i dati ogni 'skip' messaggi.
@@ -711,5 +790,6 @@ if __name__ == "__main__":
         plot_distances_by_obstacles(all_experiments_results)
         # plot_radial_velocities(all_experiments_results)
         plot_fear_comparison(all_experiments_results)
+        plot_average_inference_times(all_experiments_results)
     else:
         print("Nessun dato da plottare.")
