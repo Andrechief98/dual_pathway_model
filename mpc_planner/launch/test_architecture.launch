@@ -95,9 +95,9 @@
     </node>
 
     
-    <!-- <node pkg="dual_pathway_interfaces"         type="optitracker_node.py"              name="optitracker"                      output="screen" /> -->
+    <node pkg="dual_pathway_interfaces"         type="optitracker_node.py"              name="optitracker"                      output="screen" />
     <node pkg="dual_pathway_interfaces"         type="odom_world_static_broadcaster.py" name="calibration_node"                 output="screen" />
-    <node pkg="dual_pathway_interfaces"         type="fake_optitracker_node_dynamic.py" name="optitracker_fake"                      output="screen" />
+    <!-- <node pkg="dual_pathway_interfaces"         type="fake_optitracker_node_dynamic.py" name="optitracker_fake"                      output="screen" /> -->
     <!-- <node pkg="dual_pathway_interfaces"         type="hybrid_optitracker_node_dynamic.py" name="optitracker_hybrid"                      output="screen" /> -->
 
     <node pkg="low_road"                        type="amygdala_vlm_multifear.py"        name="amygdala"                         output="screen" />

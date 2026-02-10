@@ -155,7 +155,10 @@ class AmygdalaNode:
         dt = current_time - self.previous_time_instant
         self.previous_time_instant = current_time
         
-        if dt <= 0: return
+        
+        if dt <= 0: 
+            print("dt <= 0")
+            return
 
         all_fears = {}
 

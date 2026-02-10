@@ -30,14 +30,15 @@ open_ros_window() {
 
 # 1. Simulation
 open_ros_window "PLANNER" "roslaunch apf_planner test_architecture.launch experiment:='dynamic'"
-sleep 20
+sleep 10
 
 # 2. Rosbag recorder
 open_ros_window "RECORDER" "cd $DEST_FOLDER && rosbag record -O ${BAG_NAME}.bag $TOPICS"
 
 # 3. Starting experiment (publishing robot's goal)
-open_ros_window "GOAL_PUBLISHER" "rostopic pub /custom/move_base_simple/goal geometry_msgs/PoseStamped '$MSG'"
 open_ros_window "OBSTACLES_CONTROLLER" "rosrun low_road controller_obstacles.py"
+open_ros_window "GOAL_PUBLISHER" "rostopic pub /custom/move_base_simple/goal geometry_msgs/PoseStamped '$MSG'"
+
 
 sleep $DURATION
 

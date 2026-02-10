@@ -16,7 +16,10 @@ bag_files_list = [
     "MPC_dynamic.bag", 
     "MPC_lr_dynamic.bag", 
     "MPC_hr_dynamic.bag",
+    "MPC_hr_dynamic_out_FOV.bag",
     "MPC_dp_dynamic.bag",
+    # "MPC_dp_dynamic_out_FOV.bag",
+    "MPC_dp_dynamic_out_FOV_good.bag",
     "APF_dynamic.bag"
 ]
 
@@ -49,6 +52,9 @@ legend_mapping = {
     "MPC_lr_dynamic.bag": "MPC_{lr}", 
     "MPC_hr_dynamic.bag": "MPC_{hr}", 
     "MPC_dp_dynamic.bag": "MPC_{dp}",
+    "MPC_dp_dynamic_out_FOV.bag": "MPC_{dp-out-FOV}",
+    "MPC_dp_dynamic_out_FOV_good.bag": "MPC_{dp-out-FOV_2}",
+    "MPC_hr_dynamic_out_FOV.bag": "MPC_{hr-out-FOV}",
     "APF_dynamic.bag" : "APF"
 }
 

@@ -13,12 +13,12 @@ import json
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 bag_files_list = [
-    # "MPC_dynamic.bag", 
+    "MPC_dynamic.bag", 
     "MPC_lr_dynamic.bag", 
     "MPC_hr_dynamic.bag",
-    "MPC_hr_dynamic_out_FOV.bag",
-    "MPC_dp_dynamic.bag",
-    "MPC_dp_dynamic_out_FOV.bag",
+    # "MPC_hr_dynamic_out_FOV.bag",
+    # "MPC_dp_dynamic.bag",
+    # "MPC_dp_dynamic_out_FOV.bag",
     # "APF_dynamic.bag"
 ]
 

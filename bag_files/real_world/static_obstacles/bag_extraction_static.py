@@ -188,6 +188,42 @@ def plot_multi_trajectory(all_data, DT_FOOTPRINT = 2.0 ):
             y_vals = df_robot['y'].to_numpy()
             yaw_vals = df_robot['yaw'].to_numpy()
             time_vals = df_robot['time'].to_numpy()
+
+            # Reconstruction of the last value
+            if file_name == "APF_static.bag":
+                
+                is_different = (x_vals != x_vals[-1]) | (y_vals != y_vals[-1])
+                diff_indices = np.where(is_different)[0]
+
+                if len(diff_indices) > 0:
+                    cut_idx = diff_indices[-1] + 1
+                else:
+                    cut_idx = len(x_vals)
+
+                x_vals = x_vals[:cut_idx]
+                y_vals = y_vals[:cut_idx]
+                yaw_vals = yaw_vals[:cut_idx]
+                time_vals = time_vals[:cut_idx]
+
+                n_rep = 5 
+                t_step = DT_FOOTPRINT # Usiamo il passo dei footprint per la ripetizione temporale
+
+                last_t = time_vals[-1]
+                
+                # Creiamo i blocchi da aggiungere
+                rep_x = np.full(n_rep, 9.5)
+                rep_y = np.full(n_rep, -0.35)
+                rep_yaw = np.full(n_rep, yaw_vals[-1])
+                print(rep_yaw)
+
+                rep_time = last_t + np.arange(1, n_rep + 1) * t_step
+
+                x_vals = np.concatenate((x_vals, rep_x))
+                y_vals = np.concatenate((y_vals, rep_y))
+                yaw_vals = np.concatenate((yaw_vals, rep_yaw))
+                time_vals = np.concatenate((time_vals, rep_time))
+
+
             color = cmap(i % 10)
             
             # Trajectory plot
@@ -202,11 +238,16 @@ def plot_multi_trajectory(all_data, DT_FOOTPRINT = 2.0 ):
                 )
             
             # Ellipsoid plot (footprints - each DT_FOOTPRINT seconds)
-            max_t = time_vals.max()      
+            max_t = time_vals.max()
             checkpoint_times = np.arange(0, max_t, DT_FOOTPRINT)
 
-            for t_target in checkpoint_times:
-                idx = (np.abs(time_vals - t_target)).argmin()
+            indices = [np.abs(time_vals - t).argmin() for t in checkpoint_times]
+            
+            last_idx = len(x_vals) - 1
+            if last_idx not in indices:
+                indices.append(last_idx)
+            
+            for idx in indices:
                 ellipse = patches.Ellipse(
                     (x_vals[idx], y_vals[idx]), 
                     width=2*ROBOT_SEMI_AXIS_A, 
@@ -215,21 +256,24 @@ def plot_multi_trajectory(all_data, DT_FOOTPRINT = 2.0 ):
                     color=color, 
                     fill=False, 
                     linestyle='--', 
-                    alpha=0.3
+                    alpha=0.3,
+                    zorder=3 # Sopra la linea della traiettoria
                 )
                 ax.add_patch(ellipse)
 
             # Final ellipsoid
             final_ellipse = patches.Ellipse(
                 (x_vals[-1], y_vals[-1]), 
-                width                       =       2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B, 
-                angle                       =       yaw_vals[-1], 
-                color                       =       color, 
-                fill                        =       True, 
-                alpha                       =       0.2, 
+                width=2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B, 
+                angle=yaw_vals[-1], 
+                color=color, 
+                fill=True, 
+                alpha=0.2,
+                linestyle='--', # Forza il tratteggio anche sull'ultimo pieno
+                linewidth=2,     # Rende il bordo un po' più evidente
+                zorder=4
             )
             ax.add_patch(final_ellipse)
-            ax.scatter(x_vals[-1], y_vals[-1], color=color, marker='x', s=50)
 
     # PLOT OBSTACLES POSITIONS
     first_exp_data = list(all_data.values())[0]
@@ -821,15 +865,15 @@ if __name__ == "__main__":
             if data: all_experiments_results[file_name] = data
 
     if all_experiments_results:
-        # plot_multi_trajectory(all_experiments_results)
+        plot_multi_trajectory(all_experiments_results)
         
-        # plot_trajectory_keyframes(all_data=all_experiments_results)
+        plot_trajectory_keyframes(all_data=all_experiments_results)
         
-        # plot_velocities(all_experiments_results)        
+        plot_velocities(all_experiments_results)        
         
-        # plot_combined_velocities(all_experiments_results)
+        plot_combined_velocities(all_experiments_results)
 
-        # plot_distances_by_obstacle(all_experiments_results)
+        plot_distances_by_obstacle(all_experiments_results)
         
         # plot_fear_comparison(all_experiments_results)
 
