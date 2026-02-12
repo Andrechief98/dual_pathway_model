@@ -44,25 +44,34 @@ radius_mapping = {
     "Cardboard box" : 0.3
 }
 
+# legend_mapping = {
+#     "MPC_dynamic.bag" : "MPC", 
+#     "MPC_dynamic_good.bag" : "MPC_{good}", 
+
+#     "MPC_lr_dynamic.bag": "MPC_{lr}", 
+    
+#     "MPC_hr_dynamic_out_FOV_good.bag": "MPC_{hr_good}",
+#     "MPC_hr_dynamic_out_FOV_good2.bag": "MPC_{hr_good2}",
+#     "MPC_hr_dynamic_out_FOV_good3.bag": "MPC_{hr_good3}",
+#     "MPC_hr_dynamic_out_FOV_good4.bag": "MPC_{hr_good4}",
+#     "MPC_hr_dynamic_out_FOV.bag": "MPC_{hr}",
+
+#     "MPC_dp_dynamic_out_FOV.bag": "MPC_{dp-out-FOV}",
+#     "MPC_dp_dynamic_out_FOV_good.bag": "MPC_{dp_good}",
+#     "MPC_dp_dynamic_out_FOV_good2.bag": "MPC_{dp_good2}",
+
+#     "APF_dynamic.bag" : "APF",
+#     "APF_dynamic_good.bag" : "APF"
+# }
+
 legend_mapping = {
     "MPC_dynamic.bag" : "MPC", 
-    "MPC_dynamic_good.bag" : "MPC_{good}", 
-
     "MPC_lr_dynamic.bag": "MPC_{lr}", 
-    
-    "MPC_hr_dynamic_out_FOV_good.bag": "MPC_{hr_good}",
-    "MPC_hr_dynamic_out_FOV_good2.bag": "MPC_{hr_good2}",
-    "MPC_hr_dynamic_out_FOV_good3.bag": "MPC_{hr_good3}",
-    "MPC_hr_dynamic_out_FOV_good4.bag": "MPC_{hr_good4}",
-    "MPC_hr_dynamic_out_FOV.bag": "MPC_{hr}",
-
-    "MPC_dp_dynamic_out_FOV.bag": "MPC_{dp-out-FOV}",
-    "MPC_dp_dynamic_out_FOV_good.bag": "MPC_{dp_good}",
-    "MPC_dp_dynamic_out_FOV_good2.bag": "MPC_{dp_good2}",
-
+    "MPC_hr_dynamic_out_FOV_good4.bag": "MPC_{hr}",
+    "MPC_dp_dynamic_out_FOV_good.bag": "MPC_{dp}",
     "APF_dynamic.bag" : "APF",
-    "APF_dynamic_good.bag" : "APF"
 }
+
 
 
 
@@ -419,10 +428,115 @@ def plot_trajectory_keyframes(all_data, num_keyframes=5, cols=5):
     plt.show()
 
 
+def plot_trajectory_keyframes_custom(all_data, keyframes_config, cols=5):
+    """
+    Genera keyframes basati su timestamp specifici per ogni bag file.
+    
+    Args:
+        all_data: Dizionario con i dati dei bag.
+        keyframes_config: Dizionario { 'nome_bag': [t1, t2, t3, t4, t5] }.
+        cols: Numero di colonne (default 5).
+    """
+    
+    bag_names = list(all_data.keys())
+    num_bags = len(bag_names)
+    
+    fig, axs = plt.subplots(num_bags, cols, figsize=(4 * cols, 5 * num_bags), squeeze=False)
+    fig.suptitle(r'$\mathrm{Robot\ Trajectory\ Evolution}$', fontsize=20, y=0.99)
+
+    colors_robot = plt.cm.get_cmap('tab10').colors
+    obs_color_map = {
+        'Person': 'skyblue', 
+        'Rover': 'lightgray', 
+        'Cylinder': 'orange', 
+        'Cardboard box': 'bisque'
+    }
+
+    for row_idx, bag_name in enumerate(bag_names):
+        data = all_data[bag_name]
+        df_r = data['robot_path']
+        obs_paths = data['obstacle_paths']
+        
+        if df_r.empty: 
+            continue
+        
+        # Recupero i keyframes specifici per questo bag, 
+        # se non forniti usa il vecchio linspace come fallback
+        times_r_full = df_r['time'].to_numpy()
+        if bag_name in keyframes_config:
+            checkpoint_times = keyframes_config[bag_name]
+        else:
+            print(f"Warning: Keyframes non definiti per {bag_name}. Uso linspace.")
+            checkpoint_times = np.linspace(0, times_r_full.max(), cols)
+        
+        display_name = legend_mapping.get(bag_name, bag_name)
+        label_bag = rf"$\mathrm{{{display_name}}}$"
+        robot_color = colors_robot[row_idx % 10]
+
+        for col_idx, t_val in enumerate(checkpoint_times):
+            # Gestione sicurezza indice colonne
+            if col_idx >= cols: break 
+            
+            ax = axs[row_idx, col_idx]
+            
+            # --- 1. Plot Robot Path ---
+            idx_r = (np.abs(times_r_full - t_val)).argmin()
+            df_r_curr = df_r.iloc[:idx_r + 1]
+
+            if not df_r_curr.empty:
+                ax.plot(df_r_curr['x'].to_numpy(), df_r_curr['y'].to_numpy(), 
+                        color=robot_color, linewidth=2, alpha=0.7, zorder=5)
+                
+                curr_r = df_r_curr.iloc[-1]
+                ell = patches.Ellipse(
+                    (curr_r['x'], curr_r['y']), 
+                    width=2*ROBOT_SEMI_AXIS_A, height=2*ROBOT_SEMI_AXIS_B,
+                    angle=curr_r['yaw'], color=robot_color, fill=True, alpha=0.5, zorder=6
+                )
+                ax.add_patch(ell)
+
+            # --- 2. Plot Ostacoli SPECIFICI ---
+            for obs_label, df_o in obs_paths.items():
+                if df_o is None or df_o.empty: 
+                    continue
+                
+                obs_col = obs_color_map.get(obs_label, 'bisque')
+                t_obs_full = df_o['time'].to_numpy()
+                
+                idx_o = (np.abs(t_obs_full - t_val)).argmin()
+                df_o_curr = df_o.iloc[:idx_o + 1]
+                
+                if not df_o_curr.empty:
+                    ax.plot(df_o_curr['x'].to_numpy(), df_o_curr['y'].to_numpy(), 
+                            color=obs_col, linestyle=':', linewidth=1.5, alpha=0.6, zorder=2)
+                    
+                    curr_o = df_o_curr.iloc[-1]
+                    radius = radius_mapping.get(obs_label, 0.3)
+                    circ = plt.Circle((curr_o['x'], curr_o['y']), radius, facecolor=obs_col, 
+                                      edgecolor='black', linewidth=0.8, alpha=0.8, zorder=3)
+                    ax.add_patch(circ)
+
+            # --- 3. Formattazione ---
+            if row_idx == 0:
+                ax.set_title(rf'$\mathbf{{Keyframe\ {col_idx+1}}}$', fontsize=14)
+            if col_idx == 0:
+                ax.set_ylabel(label_bag, fontsize=14, fontweight='bold')
+            
+            ax.set_aspect('equal')
+            ax.set_xlim([-1.5, 11]) 
+            ax.set_ylim([-4, 4])
+            ax.grid(True, linestyle='--', alpha=0.4)
+            
+            ax.text(0.05, 0.05, rf'$t={t_val:.1f}s$', transform=ax.transAxes, 
+                    fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.97])
+    plt.show()
+
 
 def plot_velocities(all_data):
     # Saltiamo il primo elemento e prendiamo i restanti
-    items_to_plot = list(all_data.items())[1:]
+    items_to_plot = list(all_data.items())
     num_bags = len(items_to_plot)
     
     if num_bags == 0:
@@ -435,6 +549,9 @@ def plot_velocities(all_data):
 
     for i, (file_name, data) in enumerate(items_to_plot):
         df_vel = data['velocity']
+
+        
+
         
         if df_vel is None or df_vel.empty:
             axs[i, 0].text(0.5, 0.5, "No data", ha='center')
@@ -444,6 +561,14 @@ def plot_velocities(all_data):
         t = df_vel['time'].to_numpy()
         lin = df_vel['linear'].to_numpy()
         ang = df_vel['angular'].to_numpy()
+
+        if file_name == "MPC_dp_dynamic_out_FOV_good.bag":
+            time_cut = 30
+            idx_taglio = np.searchsorted(t, time_cut)
+    
+            t = t[:idx_taglio]
+            lin = lin[:idx_taglio]
+            ang = ang[:idx_taglio]
 
         label_name = legend_mapping[file_name]
 
@@ -489,6 +614,14 @@ def plot_velocities_combined(all_data):
         t = df_vel['time'].to_numpy()
         lin = df_vel['linear'].to_numpy()
         ang = df_vel['angular'].to_numpy()
+
+        if file_name == "MPC_dp_dynamic_out_FOV_good.bag":
+            time_cut = 30
+            idx_taglio = np.searchsorted(t, time_cut)
+    
+            t = t[:idx_taglio]
+            lin = lin[:idx_taglio]
+            ang = ang[:idx_taglio]
 
         # Recupero nome dalla legenda e pulizia per LaTeX
         label_name = legend_mapping[file_name]
@@ -657,6 +790,20 @@ def plot_distances_by_obstacles(all_data):
             ryaw = np.radians(df_robot['yaw'].to_numpy()) # Conversione in radianti
 
             # --- Interpolazione Ostacolo ---
+            cutoff_times = {
+                "MPC_lr_dynamic.bag": 30,
+                "MPC_dp_dynamic_out_FOV_good.bag": 30,
+            }
+            if file_name in cutoff_times:
+                limit = cutoff_times[file_name]
+                idx = np.searchsorted(t_r, limit)
+                # Affettiamo tutti i vettori del robot
+                t_r = t_r[:idx]
+                rx = rx[:idx]
+                ry = ry[:idx]
+                ryaw = ryaw[:idx]
+
+
             # Poiché l'ostacolo si muove, dobbiamo sapere dove si trova esattamente ai tempi t_r del robot
             ox = np.interp(t_r, df_obs['time'].to_numpy(), df_obs['x'].to_numpy())
             oy = np.interp(t_r, df_obs['time'].to_numpy(), df_obs['y'].to_numpy())
@@ -714,7 +861,7 @@ def plot_distances_by_obstacles(all_data):
 
 def plot_fear_comparison(all_data):
     # Saltiamo il primo elemento come richiesto
-    items_to_plot = list(all_data.items())#[1:]
+    items_to_plot = list(all_data.items())[1:]
     num_bags = len(items_to_plot)
     
     if num_bags == 0: return
@@ -765,8 +912,18 @@ if __name__ == "__main__":
 
     if all_experiments_results:
         # plot_multi_trajectory(all_experiments_results)
-        plot_trajectory_keyframes(all_data=all_experiments_results)
-        # plot_velocities(all_experiments_results)
+        # plot_trajectory_keyframes(all_data=all_experiments_results)
+
+        relevant_keyframes = {
+            "MPC_dynamic.bag": [0.0, 5.0, 10, 15, 22.5],
+            "MPC_lr_dynamic.bag": [0.0, 5.0, 10, 15, 24],
+            "MPC_hr_dynamic_out_FOV_good4.bag": [0.0, 5.0, 10, 15, 22.5],
+            "MPC_dp_dynamic_out_FOV_good.bag": [0.0, 5.0, 10, 15, 22.5],
+            "APF_dynamic.bag": [0.0, 5.0, 10, 15, 30],
+        }
+        
+        plot_trajectory_keyframes_custom(all_data=all_experiments_results, keyframes_config=relevant_keyframes)
+        plot_velocities(all_experiments_results)
         plot_velocities_combined(all_experiments_results)
         plot_distances_by_obstacles(all_experiments_results)
         # plot_radial_velocities(all_experiments_results)
