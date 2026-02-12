@@ -138,7 +138,7 @@ private:
     double delta_t=0.1;
 
     //APF PARAMETERS
-    double alfa=0.15;                    
+    double alfa=0.2;                    
     double lambda=0.7;
     double A=0.99;
     double B=0.1;

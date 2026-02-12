@@ -15,10 +15,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 bag_files_list = [
     "MPC_dynamic.bag", 
     "MPC_lr_dynamic.bag", 
-    "MPC_hr_dynamic.bag",
-    "MPC_hr_dynamic_out_FOV.bag",
-    "MPC_dp_dynamic.bag",
-    # "MPC_dp_dynamic_out_FOV.bag",
+    "MPC_hr_dynamic_out_FOV_good4.bag",
     "MPC_dp_dynamic_out_FOV_good.bag",
     "APF_dynamic.bag"
 ]
@@ -49,14 +46,25 @@ radius_mapping = {
 
 legend_mapping = {
     "MPC_dynamic.bag" : "MPC", 
+    "MPC_dynamic_good.bag" : "MPC_{good}", 
+
     "MPC_lr_dynamic.bag": "MPC_{lr}", 
-    "MPC_hr_dynamic.bag": "MPC_{hr}", 
-    "MPC_dp_dynamic.bag": "MPC_{dp}",
+    
+    "MPC_hr_dynamic_out_FOV_good.bag": "MPC_{hr_good}",
+    "MPC_hr_dynamic_out_FOV_good2.bag": "MPC_{hr_good2}",
+    "MPC_hr_dynamic_out_FOV_good3.bag": "MPC_{hr_good3}",
+    "MPC_hr_dynamic_out_FOV_good4.bag": "MPC_{hr_good4}",
+    "MPC_hr_dynamic_out_FOV.bag": "MPC_{hr}",
+
     "MPC_dp_dynamic_out_FOV.bag": "MPC_{dp-out-FOV}",
-    "MPC_dp_dynamic_out_FOV_good.bag": "MPC_{dp-out-FOV_2}",
-    "MPC_hr_dynamic_out_FOV.bag": "MPC_{hr-out-FOV}",
-    "APF_dynamic.bag" : "APF"
+    "MPC_dp_dynamic_out_FOV_good.bag": "MPC_{dp_good}",
+    "MPC_dp_dynamic_out_FOV_good2.bag": "MPC_{dp_good2}",
+
+    "APF_dynamic.bag" : "APF",
+    "APF_dynamic_good.bag" : "APF"
 }
+
+
 
 
 def quaternion_to_yaw_deg(q):
@@ -319,11 +327,12 @@ def plot_trajectory_keyframes(all_data, num_keyframes=5, cols=5):
     Genera keyframes dinamici: ogni riga rappresenta un bag file diverso.
     Usa i dati degli ostacoli specifici di ogni bag.
     """
+    
     bag_names = list(all_data.keys())
     num_bags = len(bag_names)
     
     fig, axs = plt.subplots(num_bags, cols, figsize=(4 * cols, 5 * num_bags), squeeze=False)
-    fig.suptitle(r'$\mathrm{Multi-Scenario\ Trajectory\ Evolution\ (Per-Bag\ Obstacles)}$', fontsize=20, y=0.99)
+    fig.suptitle(r'$\mathrm{Robot\ Trajectory\ Evolution}$', fontsize=20, y=0.99)
 
     colors_robot = plt.cm.get_cmap('tab10').colors
     obs_color_map = {
@@ -342,7 +351,7 @@ def plot_trajectory_keyframes(all_data, num_keyframes=5, cols=5):
             continue
         
         # Gestione del nome per la label (evita il backslash nella f-string)
-        display_name = legend_mapping.get(bag_name, bag_name).replace("_", r"\_")
+        display_name = legend_mapping.get(bag_name, bag_name)
         label_bag = rf"$\mathrm{{{display_name}}}$"
         
         # Conversione tempi a numpy
@@ -436,9 +445,7 @@ def plot_velocities(all_data):
         lin = df_vel['linear'].to_numpy()
         ang = df_vel['angular'].to_numpy()
 
-        # Pulizia nome per LaTeX
-        clean_name = file_name.replace('_', r'\_')
-        label_name = legend_mapping.get(file_name, clean_name)
+        label_name = legend_mapping[file_name]
 
         # --- Subplot Velocità Lineare (v) ---
         axs[i, 0].plot(t, lin, color='blue', linewidth=1.5)
@@ -707,7 +714,7 @@ def plot_distances_by_obstacles(all_data):
 
 def plot_fear_comparison(all_data):
     # Saltiamo il primo elemento come richiesto
-    items_to_plot = list(all_data.items())[1:]
+    items_to_plot = list(all_data.items())#[1:]
     num_bags = len(items_to_plot)
     
     if num_bags == 0: return
@@ -719,7 +726,7 @@ def plot_fear_comparison(all_data):
     for i, (file_name, data) in enumerate(items_to_plot):
         ax = axs[i, 0]
         fear_data = data['fear_levels']
-        
+
         if not fear_data:
             ax.text(0.5, 0.5, "No fear data found", ha='center')
             continue

@@ -10,7 +10,7 @@ DEST_FOLDER="/home/ros_ws/src/dual_pathway_model/bag_files/real_world/dynamic_ob
 MSG='{
   header: {seq: 0, stamp: {secs: 0, nsecs: 0}, frame_id: "odom"},
   pose: {
-    position: {x: 10.0, y: 0.0, z: 0.0},
+    position: {x: 9.2, y: 0.0, z: 0.0},
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
   }
 }'

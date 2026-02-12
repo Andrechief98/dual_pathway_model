@@ -275,6 +275,9 @@ class ThalamusNode:
                 # else:
                 if abs(angle_diff) <= horizontal_fov_limit:   
                     self.relevant_object_list.append(name)
+                    print(self.relevant_object_list)
+                else:
+                    print("nothing")
                 
 
 

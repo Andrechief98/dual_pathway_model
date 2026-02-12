@@ -379,7 +379,7 @@ namespace apf_planner{
             for(int k=0; k < obstacle.F_rep_obs.size(); k++){
 
                 // First possible equation:
-                obstacle.F_rep_obs[k] = exp(2.25-(distance/obstacle.radius))*F_fov*n_obs[k];
+                obstacle.F_rep_obs[k] = exp(2.35-(distance/obstacle.radius))*F_fov*n_obs[k];
                 // Funziona con 2
 
                 // Second possible equation:
