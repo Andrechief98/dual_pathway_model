@@ -1,6 +1,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseArray.h>
+#include <geometry_msgs/Point.h>
 #include <std_srvs/Empty.h>
 #include <nav_msgs/Path.h>
 #include <vector>
@@ -197,7 +198,8 @@ namespace mpc_planner {
             + terminal_slack_penalty * s * s;
 
         // Cost for obstacle slack variables
-        double slack_penalty = 1e8;
+        // double slack_penalty = 1e8;
+        double slack_penalty = 5e3;
 
         // Somma dei quadrati di tutti gli s_obs
         for (int idx = 0; idx < ns_obs; ++idx) {
@@ -482,6 +484,8 @@ namespace mpc_planner {
             sub_odom = nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &MpcPlanner::odomCallback, this);
             sub_obs = nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &MpcPlanner::obstacleGazeboCallback, this);
             sub_mpc_params = nh_.subscribe<mpcParameters>("/mpc/params",1, &MpcPlanner::paramsCallback, this);
+            sub_robot_gaussian_noise = nh_.subscribe<geometry_msgs::Point>("/robot/gaussian_noise", 1, &MpcPlanner::robotGaussianNoiseCallback, this);
+            sub_obs_gaussian_noise = nh_.subscribe<geometry_msgs::Point>("/obstacles/gaussian_noise", 1, &MpcPlanner::obsGaussianNoiseCallback, this);
             pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
             pub_optimal_traj = nh_.advertise<nav_msgs::Path>("/move_base/TrajectoryPlannerROS/local_plan", 1);
             pub_ref_posearray = nh_.advertise<geometry_msgs::PoseArray>("/pose_array",1);
@@ -701,6 +705,17 @@ namespace mpc_planner {
         int N_cost_params = Q_size + R_size + P_size + alfa_size + beta_size;
     }
 
+    void MpcPlanner::robotGaussianNoiseCallback(const geometry_msgs::Point::ConstPtr& msg){
+        robot_noise_x = msg->x;
+        robot_noise_y = msg->y;
+        robot_noise_theta = msg->z;
+    }
+
+    void MpcPlanner::obsGaussianNoiseCallback(const geometry_msgs::Point::ConstPtr& msg){
+        obs_noise_x = msg->x;
+        obs_noise_y = msg->y;
+        obs_noise_z = msg->z;
+    }
 
     void MpcPlanner::odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
         /*
@@ -821,8 +836,15 @@ namespace mpc_planner {
                         double y_map = pose_out.pose.position.y;
                         ros::Time time = ros::Time::now();
 
-                        // --- Aggiorna la posizione dell’ostacolo nel frame map
-                        obstacles_list[i].updateInfo(x_map, y_map, time);
+                        // Add gaussian noise
+                        double x_noised = x_map + obs_noise_x;
+                        double y_noised = y_map + obs_noise_y;
+
+                        // Aggiorna la posizione dell’ostacolo nel frame map senza noise
+                        // obstacles_list[i].updateInfo(x_map, y_map, time);
+
+                        // Aggiorna la posizione dell’ostacolo nel frame map con noise
+                        obstacles_list[i].updateInfo(x_noised, y_noised, time);
 
                         // DEBUG opzionale
                         // ROS_INFO_STREAM("Obstacle radius:" << obstacles_list[i].r <<"");
@@ -908,6 +930,7 @@ namespace mpc_planner {
         robot_pose_odom.header.frame_id = "odom";
         robot_pose_odom.header.stamp = ros::Time(0); // latest available
         robot_pose_odom.pose = current_odom_.pose.pose;
+    
 
         geometry_msgs::PoseStamped robot_pose_map;
         try {
@@ -921,7 +944,11 @@ namespace mpc_planner {
         double x_map = robot_pose_map.pose.position.x;
         double y_map = robot_pose_map.pose.position.y;
         double theta_map = tf2::getYaw(robot_pose_map.pose.orientation);
-
+        
+        // Adding noise to robot odometry:
+        x_map = x_map + robot_noise_x;
+        y_map = y_map + robot_noise_y;
+        theta_map = theta_map + robot_noise_theta;
 
         // Extract odometry information from the "current_odom_" message
         double x  = x_map;
@@ -988,9 +1015,9 @@ namespace mpc_planner {
 
 
         // Extract odometry information from the "current_odom_" message
-        double x  = x_map;
-        double y = y_map;
-        double theta = theta_map;
+        double x  = x_map + robot_noise_x;
+        double y = y_map + robot_noise_y;
+        double theta = theta_map + robot_noise_theta;
 
         double delta_theta = angles::shortest_angular_distance(old_theta, theta);
         theta = old_theta + delta_theta;
@@ -1260,7 +1287,7 @@ namespace mpc_planner {
 
                             // Slack cost per questo ostacolo
                             double s_jk = s_obs_opt(idx_obs).scalar();
-                            slack_obs_cost += 1e8 * s_jk * s_jk;
+                            slack_obs_cost += 5e3 * s_jk * s_jk;
                         }
                     }
 

@@ -67,6 +67,8 @@ private:
     ros::Subscriber sub_odom;
     ros::Subscriber sub_obs;
     ros::Subscriber sub_mpc_params;
+    ros::Subscriber sub_robot_gaussian_noise;
+    ros::Subscriber sub_obs_gaussian_noise;
     ros::Publisher pub_cmd;
     ros::Publisher pub_optimal_traj;
     ros::Publisher pub_ref_posearray;
@@ -137,6 +139,17 @@ private:
     void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
     void obstacleGazeboCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
     void paramsCallback(const mpcParameters::ConstPtr& msg);
+    void robotGaussianNoiseCallback(const geometry_msgs::Point::ConstPtr& msg);
+    void obsGaussianNoiseCallback(const geometry_msgs::Point::ConstPtr& msg);
+
+    // Gaussian noise
+    double robot_noise_x = 0.0;
+    double robot_noise_y = 0.0;
+    double robot_noise_theta = 0.0;
+
+    double obs_noise_x = 0.0;
+    double obs_noise_y = 0.0;
+    double obs_noise_z = 0.0;
 
     };
 
