@@ -69,6 +69,8 @@ namespace apf_planner{
             
             sub_odom    =   nh_.subscribe<nav_msgs::Odometry>("/odom", 1, &ApfPlanner::odomCallback, this);
             sub_obs     =   nh_.subscribe<gazebo_msgs::ModelStates>("/gazebo/model_states", 1, &ApfPlanner::obstacleGazeboCallback, this);
+            sub_robot_gaussian_noise = nh_.subscribe<geometry_msgs::Point>("/robot/gaussian_noise", 1, &ApfPlanner::robotGaussianNoiseCallback, this);
+            sub_obs_gaussian_noise = nh_.subscribe<geometry_msgs::Point>("/obstacles/gaussian_noise", 1, &ApfPlanner::obsGaussianNoiseCallback, this);
             pub_cmd     =   nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
             initialized_ = true;
@@ -80,6 +82,25 @@ namespace apf_planner{
 
         initialized_=true;
         ROS_INFO("APF local planner initialized");
+    }
+
+    void ApfPlanner::robotGaussianNoiseCallback(const geometry_msgs::Point::ConstPtr& msg){
+        robot_noise_x = msg->x;
+        robot_noise_y = msg->y;
+        robot_noise_theta = msg->z;
+        // std::cout << "robot noise x: " << robot_noise_x << std::endl;
+        // std::cout << "robot noise y: " << robot_noise_y << std::endl;
+        // std::cout << "robot noise theta: " << robot_noise_theta << std::endl;
+    }
+
+    void ApfPlanner::obsGaussianNoiseCallback(const geometry_msgs::Point::ConstPtr& msg){
+        obs_noise_x = msg->x;
+        obs_noise_y = msg->y;
+        obs_noise_z = msg->z;
+
+        // std::cout << "obstacle noise x: " << obs_noise_x << std::endl;
+        // std::cout << "obstacle noise y: " << obs_noise_y << std::endl;
+        // std::cout << "obstacle noise theta: " << obs_noise_z << std::endl;
     }
 
     void ApfPlanner::odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
@@ -187,8 +208,15 @@ namespace apf_planner{
                         double y_map = pose_out.pose.position.y;
                         ros::Time time = ros::Time::now();
 
+                        // Add gaussian noise
+                        double x_noised = x_map + obs_noise_x;
+                        double y_noised = y_map + obs_noise_y;
+
                         // --- Aggiorna la posizione dell’ostacolo nel frame map
-                        obstacles_list[i].updateInfo(x_map, y_map);
+                        // obstacles_list[i].updateInfo(x_map, y_map);
+
+                        // Aggiorna la posizione dell’ostacolo nel frame map con noise
+                        obstacles_list[i].updateInfo(x_noised, y_noised);
 
                         // DEBUG opzionale
                         // ROS_INFO_STREAM("Obstacle radius:" << obstacles_list[i].r <<"");
@@ -214,8 +242,10 @@ namespace apf_planner{
             callback) vado a salvare le coordinate attuali del robot e la sua orientazione attuale (questa sarà espressa in quaternioni)
         */
 
-        curr_robot_coordinates={robot_pose_.pose.pose.position.x, robot_pose_.pose.pose.position.y}; 
-        curr_robot_orientation=tf2::getYaw(robot_pose_.pose.pose.orientation); 
+        
+
+        curr_robot_coordinates={robot_pose_.pose.pose.position.x + robot_noise_x, robot_pose_.pose.pose.position.y +robot_noise_y}; 
+        curr_robot_orientation=tf2::getYaw(robot_pose_.pose.pose.orientation) + robot_noise_theta; 
 
         std::cout << "\n";
         std::cout << "**VETTORI COORDINATE GOAL E COORDINATE ROBOT CALCOLATI: " << std::endl;
@@ -282,7 +312,8 @@ namespace apf_planner{
         tf2::Vector3 velocity_in_target_frame = transform * velocity_in_child_frame;
 
         //aggiorno il vettore velocità attuale del robot con i nuovi valori rispetto al frame "map"
-        curr_robot_lin_vel={velocity_in_target_frame[0],velocity_in_target_frame[1]};
+        double epsilon = 1e-8;
+        curr_robot_lin_vel={velocity_in_target_frame[0] + epsilon,velocity_in_target_frame[1] + epsilon};
 
         //calcolo la direzione attuale del robot rispetto al frame "map" come versore della velocità attuale:
         for(int i=0; i<n_robot.size();i++){
@@ -356,7 +387,7 @@ namespace apf_planner{
             for(int k=0; k < obstacle.F_rep_obs.size(); k++){
 
                 // First possible equation:
-                obstacle.F_rep_obs[k] = exp(3-(distance/obstacle.radius))*F_fov*n_obs[k];
+                obstacle.F_rep_obs[k] = exp(2.35-(distance/obstacle.radius))*F_fov*n_obs[k];
 
                 // Second possible equation:
                 //obstacle.F_rep_obs[k] = A*exp(-distance/B)*F_fov*n_obs[k];
@@ -563,9 +594,6 @@ namespace apf_planner{
         std::cout << "VELOCITY NEL BASE LINK FRAME: " << std::endl;
         std::cout<< velocity_in_target_frame[0] << " " << velocity_in_target_frame[1]<< std::endl;
 
-
-        //PUBBLICAZIONE MESSAGGIO
-        pub_cmd = nh_.advertise<geometry_msgs::Twist>("/cmd_vel",1);
 
         cmd_vel.angular.x=0.0;
         cmd_vel.angular.y=0.0;

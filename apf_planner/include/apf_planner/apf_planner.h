@@ -11,6 +11,7 @@
 #include <angles/angles.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Point.h>
 #include <geometry_msgs/Twist.h>
 #include <base_local_planner/odometry_helper_ros.h>
 #include <nav_msgs/Odometry.h>
@@ -70,6 +71,8 @@ private:
     ros::Subscriber sub_goal;
     ros::Publisher pub_cmd;
     
+    ros::Subscriber sub_robot_gaussian_noise;
+    ros::Subscriber sub_obs_gaussian_noise;
 
     ros::ServiceClient people_client;
 
@@ -138,15 +141,25 @@ private:
     double delta_t=0.1;
 
     //APF PARAMETERS
-    double alfa=0.1;                    
-    double lambda=1;
-    double A=1;
-    double B=1;
-    double R0 = 0.3;
+    double alfa=0.2;                    
+    double lambda=0.7;
+    double A=0.99;
+    double B=0.1;
 
     // Callback functions
     void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
     void obstacleGazeboCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
+    void robotGaussianNoiseCallback(const geometry_msgs::Point::ConstPtr& msg);
+    void obsGaussianNoiseCallback(const geometry_msgs::Point::ConstPtr& msg);
+
+    // Gaussian noise
+    double robot_noise_x = 0.0;
+    double robot_noise_y = 0.0;
+    double robot_noise_theta = 0.0;
+
+    double obs_noise_x = 0.0;
+    double obs_noise_y = 0.0;
+    double obs_noise_z = 0.0;
 
     };
 };
