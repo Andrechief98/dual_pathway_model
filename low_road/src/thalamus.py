@@ -5,6 +5,7 @@ import actionlib
 import json
 import numpy as np
 from std_msgs.msg import String
+from geometry_msgs.msg import Point
 from sensor_msgs.msg import Image
 from gazebo_msgs.msg import ModelStates
 from nav_msgs.msg import Odometry
@@ -34,6 +35,9 @@ class ThalamusNode:
         self.object_state = {}
         self.relative_info = {}
 
+        self.robot_noise_flag = None
+        self.obs_noise_flag = None
+
         # Publishers 
         self.current_state_pub = rospy.Publisher("/current_state", String, queue_size=1)
         self.thalamus_info_pub = rospy.Publisher("/thalamus/info", String, queue_size=1)
@@ -41,6 +45,8 @@ class ThalamusNode:
         # Subscribers
         self.odom_sub = rospy.Subscriber("/odometry/filtered", Odometry, self.odom_feedback_callback)
         self.gazebo_sub = rospy.Subscriber("/gazebo/model_states", ModelStates, self.thalamus_info_callback)
+        self.obst_noise_sub = rospy.Subscriber("/obstacles/gaussian_noise", Point, self.obstaclesGaussianNoiseCallback)
+        self.robot_noise_sub = rospy.Subscriber("/robot/gaussian_noise", Point, self.robotGaussianNoiseCallback)
 
         # Server
         self.camera_image_server = rospy.Service('/get_camera_image', highRoadInfo, self.getCameraImage)
@@ -59,6 +65,20 @@ class ThalamusNode:
 
         self.relevant_object_list = [] # To update the list of object within robot's fields of view
 
+        
+    def obstaclesGaussianNoiseCallback(self, msg):
+        self.obs_noise_x = msg.x
+        self.obs_noise_y = msg.y
+        self.obs_noise_z = msg.z
+
+        self.robot_noise_flag = True
+
+    def robotGaussianNoiseCallback(self, msg):
+        self.robot_noise_x = msg.x
+        self.robot_noise_y = msg.y
+        self.robot_noise_theta = msg.z
+
+        self.obs_noise_flag = True
 
     def odom_feedback_callback(self, msg):
         
@@ -144,7 +164,31 @@ class ThalamusNode:
 
 
                 else:
-                    # print(f"Name: {name}")
+                    
+
+                    if name == "mir":
+                        if self.robot_noise_flag:
+                            noise_x = self.robot_noise_x
+                            noise_y = self.robot_noise_y
+                            noise_z = 0.0
+                            noise_theta = self.robot_noise_theta
+                        else:
+                            noise_x = 0
+                            noise_y = 0
+                            noise_z = 0
+                            noise_theta = 0
+                    else:
+                        if self.obs_noise_flag:
+                            noise_x = self.obs_noise_x
+                            noise_y = self.obs_noise_y
+                            noise_z = 0.0
+                            noise_theta = 0.0
+                        else:
+                            noise_x = 0
+                            noise_y = 0
+                            noise_z = 0
+                            noise_theta = 0
+
                     # We extract the previous information to compute the velocity and acceleration
                     previous_time = self.object_state[name]["current_time"]
                     previous_pos = self.object_state[name]["current_pos"]
@@ -159,9 +203,11 @@ class ThalamusNode:
                         dt = 0.001
 
                     # We extract current information from Gazebo msg
-                    current_pos = [pose.position.x, pose.position.y, pose.position.z] 
+                    current_pos = [pose.position.x + noise_x, pose.position.y + noise_y, pose.position.z + noise_z] 
                     quaternion = [pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w]
                     _, _, current_orient = euler_from_quaternion(quaternion) # roll_x, pitch_y, yaw_z 
+
+                    current_orient += noise_theta
 
                     # We compute the current linear andangular velocity
                     dx = current_pos[0] - previous_pos[0]
