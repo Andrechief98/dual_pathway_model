@@ -11,6 +11,7 @@ from collections import defaultdict
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 ALGO_NAMES = ["MPC", "MPC_lr", "MPC_hr", "MPC_dp", "APF"]
+
 X_LIMITS = [-1.5, 12]
 Y_LIMITS = [-4.5, 4.5]
 
@@ -28,6 +29,14 @@ radius_mapping = {
     "Person": 0.3,
     "Cardboard box": 0.3
 }
+
+def format_latex_name(name):
+    """Formatta i nomi per la visualizzazione LaTeX sopra il plot."""
+    if "_" in name:
+        base, sub = name.split("_")
+        return rf"$\mathrm{{{base}_{{{sub}}}}}$"
+    return rf"$\mathrm{{{name}}}$"
+
 
 def identify_algorithm(filename):
     sorted_algos = sorted(ALGO_NAMES, key=len, reverse=True)
@@ -80,25 +89,28 @@ def plot_dynamic_comparison_grid():
             df_r, obs_dfs = extract_dynamic_data(os.path.join(script_dir, bag_file))
             if df_r is None or df_r.empty: continue
 
-            r_x, r_y = df_r['x'].to_numpy(), df_r['y'].to_numpy()
-            ax.plot(r_x, r_y, color=algo_color, alpha=0.4, linewidth=1.2, zorder=5)
-            
+
             run_index = bag_file.split('_')[-1].replace('.bag', '')
 
-            # Posizionamento a metà traiettoria
-            mid_idx = len(r_x) // 2
-            ax.text(r_x[mid_idx], r_y[mid_idx], run_index, 
-                    fontsize=10, color=algo_color, fontweight='bold',
-                    ha='center', va='center',
-                    bbox=dict(facecolor='white', alpha=0.8, edgecolor='none', pad=1),
-                    zorder=12)
-
+            if run_index != "original":
+                # Posizionamento a metà traiettoria
+                # mid_idx = len(r_x) // 2
+                # ax.text(r_x[mid_idx], r_y[mid_idx], run_index, 
+                #         fontsize=10, color=algo_color, fontweight='bold',
+                #         ha='center', va='center',
+                #         bbox=dict(facecolor='white', alpha=0.8, edgecolor='none', pad=1),
+                #         zorder=12)
+                
+                r_x, r_y = df_r['x'].to_numpy(), df_r['y'].to_numpy()
+                ax.plot(r_x, r_y, color=algo_color, alpha=0.4, linewidth=1.2, zorder=5)
+            
+            
             # Ostacoli (disegnati una sola volta per subplot)
             if file_idx == 0:
                 for obs_label, df_o in obs_dfs.items():
                     if df_o.empty: continue
                     o_x, o_y = df_o['x'].to_numpy(), df_o['y'].to_numpy()
-                    ax.plot(o_x, o_y, color='gray', linestyle=':', alpha=0.3, linewidth=0.8)
+                    ax.plot(o_x, o_y, color='gray', linestyle=':', alpha=0.4, linewidth=1.0)
                     radius = radius_mapping.get(obs_label, 0.3)
                     ax.add_patch(plt.Circle((o_x[-1], o_y[-1]), radius, color='red', fill=False, alpha=0.3))
                     ax.text(o_x[-1], o_y[-1] - 0.6, obs_label, fontsize=7, color='red', ha='center')
@@ -107,9 +119,10 @@ def plot_dynamic_comparison_grid():
         ax.set_ylim(Y_LIMITS)
         ax.set_aspect('equal')
         ax.grid(True, linestyle='--', alpha=0.3)
-        ax.set_title(rf"$\mathrm{{{algo}}}$", fontsize=16)
+        ax.set_title(format_latex_name(algo), fontsize=16)
+        ax.set_xlabel(r'$X \ [\mathrm{m}]$', fontsize=10)
+        ax.set_ylabel(r'$Y \ [\mathrm{m}]$', fontsize=10)
 
-    plt.suptitle(r"$\mathrm{Dynamic\ Trajectories\ -\ Filename-based\ Indexing}$", fontsize=20, y=0.98)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 

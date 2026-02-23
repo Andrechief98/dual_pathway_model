@@ -62,7 +62,7 @@
 
 CONTAINER_NAME="andrea_docker-ros1_noetic-1"
 DURATION=30
-NUM_RUNS=1
+NUM_RUNS=20
 
 BAG_PREFIX="MPC_dp_dynamic"  
 TOPICS="/odom /fearlevel /cmd_vel /thalamus/info /gazebo/model_states /mpc/params /mpc/statistics /amygdala/lowroad/risks /amygdala/highroad/risks /odometry/filtered" 

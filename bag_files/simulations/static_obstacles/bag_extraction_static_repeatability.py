@@ -245,22 +245,22 @@ def plot_top_titles_layout():
             y = data['robot_path']['y'].to_numpy()
             
             # Plot linea
-            ax.plot(x, y, color=color, alpha=0.3, linewidth=1.0, zorder=2)
+
+            run_index = bag_file.split('_')[-1].replace('.bag', '')
+            if run_index != "original":
+                ax.plot(x, y, color=color, alpha=0.3, linewidth=1.0, zorder=2)
+                try:
+                    
+                    mid_point = len(x)-1 #// 2 # Metà della traiettoria
+                    # Inseriamo il testo con un piccolo offset per leggibilità
+                    # ax.text(x[mid_point], y[mid_point], run_index, 
+                    #         fontsize=8, color=color, fontweight='bold',
+                    #         alpha=0.8, zorder=4)
+                except Exception:
+                    pass 
             
-            # --- AGGIUNTA INDICE RUN ---
-            # Estraiamo il numero dal nome del file (es: "MPC_1.bag" -> "1")
-            try:
-                run_index = bag_file.split('_')[-1].replace('.bag', '')
-                mid_point = len(x) // 2 # Metà della traiettoria
-                # Inseriamo il testo con un piccolo offset per leggibilità
-                ax.text(x[mid_point], y[mid_point], run_index, 
-                        fontsize=8, color=color, fontweight='bold',
-                        alpha=0.8, zorder=4)
-            except Exception:
-                pass 
-            
-            # Punto finale
-            ax.scatter(x[-1], y[-1], color=color, s=15, alpha=0.4, zorder=3)
+                # Punto finale
+                ax.scatter(x[-1], y[-1], color=color, s=15, alpha=0.4, zorder=3)
 
         # 2. Plot Ostacoli
         if global_obstacles:
