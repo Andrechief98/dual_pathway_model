@@ -118,6 +118,8 @@ class ModelMarkerVisualizerTF2:
 
         if "rover" in name:
             radius = 1.0
+        elif "Cluttering" in name: 
+            radius = 0.7
         else:
             radius = 0.3
             

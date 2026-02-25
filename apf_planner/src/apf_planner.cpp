@@ -132,7 +132,13 @@ namespace apf_planner{
                         std::string sub_string = "rover";
                         if (name.find(sub_string) != std::string::npos ){
                             radius = 1.0;
-                            // std::cout << "############### RADIUS: " << radius << std::endl;
+                            std::cout << "Rover trovato" <<std::endl;
+                        }
+
+                        sub_string = "Cluttering";
+                        if (name.find(sub_string) != std::string::npos ){
+                            radius = 0.7;
+                            std::cout << "Cluttering trovato" <<std::endl;
                         }
 
                         
@@ -148,7 +154,7 @@ namespace apf_planner{
                         // CONSIDERING TRASFORMATION:
                         // Costruisci la pose nel frame sorgente (es. "world" o "odom")
                         geometry_msgs::PoseStamped pose_in, pose_out;
-                        pose_in.header.frame_id = "odom";  // non è corretto per i modelli gazebo ma l'origin dei modelli gazebo corrisponde a odom
+                        pose_in.header.frame_id = "map";  // non è corretto per i modelli gazebo ma l'origin dei modelli gazebo corrisponde a odom
                         pose_in.header.stamp = ros::Time(0);
                         pose_in.pose = msg->pose[i];
 
@@ -191,7 +197,7 @@ namespace apf_planner{
 
                         // --- Costruisci la pose nel frame odom (Gazebo usa tipicamente odom come riferimento)
                         geometry_msgs::PoseStamped pose_in, pose_out;
-                        pose_in.header.frame_id = "odom";
+                        pose_in.header.frame_id = "map";
                         pose_in.header.stamp = ros::Time(0);
                         pose_in.pose = msg->pose[index];
 
@@ -219,9 +225,8 @@ namespace apf_planner{
                         obstacles_list[i].updateInfo(x_noised, y_noised);
 
                         // DEBUG opzionale
-                        // ROS_INFO_STREAM("Obstacle radius:" << obstacles_list[i].r <<"");
                         // ROS_INFO_STREAM("Updated obstacle[" << i << "] in map frame: ("
-                        //                 << x_map << ", " << y_map << ")");
+                        //             << x_map << ", " << y_map << ")");
                         
                     }
                 }
@@ -244,8 +249,21 @@ namespace apf_planner{
 
         
 
-        curr_robot_coordinates={robot_pose_.pose.pose.position.x + robot_noise_x, robot_pose_.pose.pose.position.y +robot_noise_y}; 
+        curr_robot_coordinates={robot_pose_.pose.pose.position.x, robot_pose_.pose.pose.position.y}; 
         curr_robot_orientation=tf2::getYaw(robot_pose_.pose.pose.orientation) + robot_noise_theta; 
+
+        geometry_msgs::TransformStamped tf_map_to_base;
+        try {
+            // Chiediamo la posizione del robot (base_link) rispetto alla mappa
+            tf_map_to_base = tfBuffer.lookupTransform("map", "base_link", ros::Time(0));
+            
+            curr_robot_coordinates[0] = tf_map_to_base.transform.translation.x + robot_noise_x;
+            curr_robot_coordinates[1] = tf_map_to_base.transform.translation.y + robot_noise_y;
+            curr_robot_orientation = tf2::getYaw(tf_map_to_base.transform.rotation) + robot_noise_theta;
+            
+        } catch (tf2::TransformException &ex) {
+            ROS_WARN_THROTTLE(1.0, "Could not transform map to base_link: %s", ex.what());
+        }
 
         std::cout << "\n";
         std::cout << "**VETTORI COORDINATE GOAL E COORDINATE ROBOT CALCOLATI: " << std::endl;
@@ -452,6 +470,8 @@ namespace apf_planner{
         //Salviamo quindi solo l'ultimo punto del vettore che contiene tutto il global path
         int size_global_plan=global_plan_.size();
         goal_pose_=global_plan_[size_global_plan-1];
+
+        
 
         //Setto le coordinate del goal all'interno di variabili globali che adopererò poi nel resto del programma:
         goal_coordinates={goal_pose_.pose.position.x, goal_pose_.pose.position.y}; // corretto

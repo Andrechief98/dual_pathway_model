@@ -94,6 +94,8 @@ class AmygdalaNode:
         for object_name, data in rel_thalamus_info.items():
             if "rover" in object_name or "robot" in object_name:
                 obs_r = 1.0 
+            elif "Cluttering" in object_name:
+                obs_r = 0.7
             else:
                 obs_r = 0.3
 

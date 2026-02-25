@@ -751,7 +751,12 @@ namespace mpc_planner {
                         std::string sub_string = "rover";
                         if (name.find(sub_string) != std::string::npos ){
                             radius = 1.0;
-                            // std::cout << "############### RADIUS: " << radius << std::endl;
+                        }
+
+                        sub_string = "Cluttering";
+                        if (name.find(sub_string) != std::string::npos ){
+                            radius = 0.7;
+
                         }
 
                         
@@ -767,7 +772,7 @@ namespace mpc_planner {
                         // CONSIDERING TRASFORMATION:
                         // Costruisci la pose nel frame sorgente (es. "world" o "odom")
                         geometry_msgs::PoseStamped pose_in, pose_out;
-                        pose_in.header.frame_id = "odom";  // non è corretto per i modelli gazebo ma l'origin dei modelli gazebo corrisponde a odom
+                        pose_in.header.frame_id = "map";  // in origine era odom
                         pose_in.header.stamp = ros::Time(0);
                         pose_in.pose = msg->pose[i];
 
@@ -784,7 +789,7 @@ namespace mpc_planner {
                         double x_map = pose_out.pose.position.x;
                         double y_map = pose_out.pose.position.y;
 
-                        // std::cout << "Coordinate ostacolo trasformate: " << x_map << " " << y_map <<std::endl;
+                        std::cout << "Coordinate ostacolo trasformate: " << x_map << " " << y_map <<std::endl;
                         ros::Time time = ros::Time::now();
 
                         Obstacle new_obstacle(x_map, y_map, radius, i, time);
@@ -819,7 +824,7 @@ namespace mpc_planner {
 
                         // --- Costruisci la pose nel frame odom (Gazebo usa tipicamente odom come riferimento)
                         geometry_msgs::PoseStamped pose_in, pose_out;
-                        pose_in.header.frame_id = "odom";
+                        pose_in.header.frame_id = "map";
                         pose_in.header.stamp = ros::Time(0);
                         pose_in.pose = msg->pose[index];
 

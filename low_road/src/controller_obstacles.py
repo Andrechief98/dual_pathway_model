@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
+import sys
 import math
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -90,23 +91,29 @@ class ProportionalController:
         self.pub.publish(msg)
 
 def main():
-    rospy.init_node('multi_object_controller', anonymous=True)
+    rospy.init_node('operator_controller', anonymous=True)
 
-    # Definizione delle configurazioni con supporto a Waypoints multipli
+    # Verifica se sono stati passati i parametri X e Y dal Bash
+    # sys.argv[0] è il nome dello script, [1] è X, [2] è Y
+    if len(sys.argv) < 3:
+        rospy.logerr("Errore: Goal X e Y non forniti. Uso: rosrun pacchetto script.py X Y")
+        return
+
+    try:
+        goal_x = float(sys.argv[1])
+        goal_y = float(sys.argv[2])
+    except ValueError:
+        rospy.logerr("Errore: I goal passati non sono numeri validi.")
+        return
+
+    # Configurazione dinamica basata sugli argomenti ricevuti
     config_list = [
         {
-            "name": "person",
-            "cmd": "/person_walking/cmd_vel",
-            "odom": "/person_walking/odom",
-            "waypoints": [(3, -1.0), (7, 2.5)],
+            "name": "operator",
+            "cmd": "/operator/cmd_vel",
+            "odom": "/operator/odom",
+            "waypoints": [(goal_x, goal_y)], # Il goal viene dal Bash
             "max_v": 0.8,
-        },
-        {
-            "name": "rover",
-            "cmd": "/rover/cmd_vel",
-            "odom": "/rover/odom",
-            "waypoints": [(0, -2)],
-            "max_v": 0.5,
         }
     ]
 
@@ -122,9 +129,20 @@ def main():
         controllers.append(ctrl)
 
     rate = rospy.Rate(20)
+    
+    # Condizione di uscita: il nodo si chiude quando l'operator arriva
     while not rospy.is_shutdown():
+        all_finished = True
         for ctrl in controllers:
             ctrl.update_control()
+            if not ctrl.all_goals_reached:
+                all_finished = False
+        
+        # Se tutti i controllori (in questo caso solo l'operator) hanno finito, chiudi il nodo
+        if all_finished:
+            rospy.loginfo("Tutti i goal raggiunti. Chiusura nodo controller.")
+            break
+            
         rate.sleep()
 
 if __name__ == '__main__':
